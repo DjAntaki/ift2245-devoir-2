@@ -26,17 +26,17 @@
 using namespace std;
 
 //Outputs a readable error message and exits the program
-void error(const char *msg)
-{
+
+void error(const char *msg) {
     perror(msg);
     exit(1);
 }
 
 //Return true if the specified file exist
-bool fileExists(const char *fileName)
-{
-	struct stat fileExistTest; 
-	return (stat(fileName,&fileExistTest) == 0);
+
+bool fileExists(const char *fileName) {
+    struct stat fileExistTest;
+    return (stat(fileName, &fileExistTest) == 0);
 }
 
 

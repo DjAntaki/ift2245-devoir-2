@@ -14,6 +14,12 @@ void ServerThreads::initializationOfDataStructures()
     // here (use the bool variable 'initDataProvided' to cover both
     // scenarios. 
 
+    if(!initDataProvided){
+    
+    // On initialise a quelle valeur???
+    
+    }
+    
     /// TP2_END_TO_DO
 
     ///DO NOT ERASE THIS PART
@@ -34,15 +40,38 @@ void ServerThreads::processRequest(int threadID, int socketFD)
     // prints it and sends a random answer to the client
     // you MUST change this behaviour
 
-    char buffer[20];
+    int buffer[];
     bzero(buffer, 20);
     int n = read(socketFD, buffer, 19);
     if (n < 0) error("ERROR reading from socket");
-
+    
+    
     cout << "Thread " << threadID << " received the request: " << buffer << endl;
+    int clientID;//parser le buffer ici    
+    int request[numResources];
 
-    int answerToClient = -(rand() % 2); //Randonmly send a 0 or -1 answer to the client
-
+    int answerToClient = 1; ///On suppose la requête valide
+        for (int i=0; i<numResources;i++){
+        if(request[i] <= Max[clientID][i]){
+            if(request[i] > Available[i]){
+                //Not enough ressources
+                answerToClient = 0;
+                break;
+            }
+        
+        } else{
+            //Invalid request
+            answerToClient = -1;
+            break;                    
+        }
+    }
+    if(answerToClient == 1){
+        for(int i=0;i<numResources;i++){
+            Available[i] -= request[i];
+            Allocation[clientID][i] += request[i];
+        }
+    }
+    
     n = sprintf(buffer, "%d", answerToClient);
     n = write(socketFD, buffer, n);
     if (n < 0) error("ERROR writing to socket");

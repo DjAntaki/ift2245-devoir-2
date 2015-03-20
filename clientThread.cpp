@@ -17,6 +17,7 @@ void ClientThread::additionalInitialization()
 void ClientThread::sendRequest(int clientID, int requestID, int socketFD)
 {
     /// TP2_TO_DO
+    /// 
 
     cout << "Client " << clientID << " is sending its " << requestID << " request" << endl;
 

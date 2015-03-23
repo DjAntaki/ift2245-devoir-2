@@ -31,7 +31,7 @@ void Client::send(int requestID, int socket) {
         }
     }
 
-    cout << "client " << this->id << "request: " << requestID << " ";
+    cout << "client " << this->id << " request: " << requestID << " ";
 
     // impression de la requête
     for (int i = 2; i < sizeof (request); i++)

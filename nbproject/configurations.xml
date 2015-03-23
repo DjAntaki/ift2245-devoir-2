@@ -4,7 +4,6 @@
     <df root="." name="0">
       <in>client.cpp</in>
       <in>server.cpp</in>
-      <in>serverThreads.cpp</in>
     </df>
     <logicalFolder name="ExternalFiles"
                    displayName="Important Files"
@@ -38,8 +37,6 @@
       <item path="client.cpp" ex="false" tool="1" flavor2="4">
       </item>
       <item path="server.cpp" ex="false" tool="1" flavor2="4">
-      </item>
-      <item path="serverThreads.cpp" ex="false" tool="1" flavor2="4">
       </item>
     </conf>
   </confs>

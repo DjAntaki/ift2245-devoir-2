@@ -1,31 +1,64 @@
 #ifndef CLIENTTHREAD_H
 #define CLIENTTHREAD_H
 
+#include "common.h"
+
 //POSIX library for threads
 #include <pthread.h>
 #include <unistd.h>
 
-class ClientThread {
+class Client {
 public:
-    int ID;
-    static int portNumber;
+    /**
+     * Identifiant unique du client.
+     */
+    int id;
+
+    /**
+     * Thread identifier
+     */
+    pthread_t pt_tid;
+
+    /**
+     * Resources acquises par le client.
+     * 
+     * Ceci est de taille numResources.
+     */
+    int acquired[];
+
+    static int port;
     static int numClients;
     static int numResources;
     static int numRequests;
 
-    ClientThread();
-    ~ClientThread();
-    void createAndStartThread();
-    static void additionalInitialization();
-    static void sendRequest(int clientID, int requestID, int socketFD);
-    static void waitUntilServerFinishes();
+    Client();
+    ~Client();
+
+    /**
+     * Envoit une requête au serveur.
+     * 
+     * @param requestID
+     * @param socketFD
+     */
+    void send(int request_id, int sock);
+
+    /**
+     * Lance un thread client
+     * 
+     * @param param
+     * @return 
+     */
+    static void *run(void * param);
+
     static void printAndSaveResults(const char* fileName);
     static int readConfigurationFile(const char *fileName);
     static void readMaxFromFile();
 
 private:
-    // Maximum number of instances of each resource type 
-    // that each client MAY need
+
+    /**
+     * Nombre maximale de resources que les clients peuvent acquérir.
+     */
     static int **Max;
 
     // Results variables
@@ -35,11 +68,6 @@ private:
     static int countClientsDispatched; // Result counter for total clients correctly finished
 
     static int count; // Common counter of created ClienThread to asign an ID
-    pthread_t pt_tid; // The thread identifier
-    pthread_attr_t pt_attr; // Set of thread identifiers
-
-    //Function that will be called by every client thread
-    static void *clientThreadCode(void * param);
 };
 
 #endif // CLIENTTHREAD_H

@@ -4,8 +4,7 @@
 ///In this function initialize the Banker's Algorithm
 ///data structures as you see convinient
 
-void ServerThreads::initializationOfDataStructures()
-{
+void ServerThreads::initializationOfDataStructures() {
     /// TP2_TO_DO
 
     // If 'initialValuesProvided' is true in the configuraton file
@@ -26,8 +25,13 @@ void ServerThreads::initializationOfDataStructures()
 /// the socket socketFD. Do not forget to send an adequate answer
 /// to the client as specifid on the TP2
 
-void ServerThreads::processRequest(int threadID, int socketFD)
-{
+/**
+ * 
+ * 
+ * @param threadID
+ * @param socketFD
+ */
+void ServerThreads::processRequest(int threadID, int socketFD) {
     /// TP2_TO_DO
 
     // Currently the server only receives the request
@@ -50,8 +54,7 @@ void ServerThreads::processRequest(int threadID, int socketFD)
     // This part lets the server know how many request it has
     // processed so far, so that it can finish when all the 
     // excpected requests have been proccesed.
-    if (read(socketFD, buffer, 255) == 0)
-    { //Nothing else to read
+    if (read(socketFD, buffer, 255) == 0) { //Nothing else to read
         requestProcesed++;
     }
 
@@ -63,8 +66,7 @@ void ServerThreads::processRequest(int threadID, int socketFD)
 /// the client know that it has finished, so that the client
 /// can finish itself. HINT: Look for named pipes
 
-void ServerThreads::signalFinishToClient()
-{
+void ServerThreads::signalFinishToClient() {
     /// TP2_TO_DO
 
     sleep(2);
@@ -76,8 +78,7 @@ void ServerThreads::signalFinishToClient()
 /// Rather use it as an example of socket functonality
 /// to do the conections on the clients
 
-void* ServerThreads::threadCode(void * param)
-{
+void* ServerThreads::threadCode(void * param) {
     int ID = *((int*) param);
 
     struct sockaddr_in thread_addr;
@@ -86,11 +87,10 @@ void* ServerThreads::threadCode(void * param)
     int start = time(NULL);
 
     // Loop until accept() returns the first valid conection
-    while (threadSocketFD < 0)
-    {
+    while (threadSocketFD < 0) {
         threadSocketFD = accept(serverSocketFD,
-                                (struct sockaddr *) &thread_addr,
-                                &threadSL);
+                (struct sockaddr *) &thread_addr,
+                &threadSL);
 
         if ((time(NULL) - start) >= maxWaitTime ||
                 requestProcesed == totalNumRequests)
@@ -98,17 +98,14 @@ void* ServerThreads::threadCode(void * param)
     }
 
     // Now loop until the server has completely dispatched all clients
-    while (requestProcesed < totalNumRequests)
-    {
+    while (requestProcesed < totalNumRequests) {
 
-        if ((time(NULL) - start) >= maxWaitTime)
-        {
+        if ((time(NULL) - start) >= maxWaitTime) {
             cerr << "Time out on thread " << ID << endl;
             pthread_exit(NULL);
         }
 
-        if (threadSocketFD > 0)
-        {
+        if (threadSocketFD > 0) {
             // Process request from connection
             processRequest(ID, threadSocketFD);
             close(threadSocketFD);
@@ -116,16 +113,15 @@ void* ServerThreads::threadCode(void * param)
 
         //Take next conextion available
         threadSocketFD = accept(serverSocketFD,
-                                (struct sockaddr *) &thread_addr,
-                                &threadSL);
+                (struct sockaddr *) &thread_addr,
+                &threadSL);
     }
 }
 
 /// Do not modify this function
 /// Rather use it as an example to uderstand socket functionality
 
-void ServerThreads::createAndStart()
-{
+void ServerThreads::createAndStart() {
     //Create the main server socket and define a port to listen to
     serverSocketFD = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
     if (serverSocketFD < 0)
@@ -149,8 +145,7 @@ void ServerThreads::createAndStart()
     cout << "Now waiting for clients..." << endl;
 
     //Finally create each child thread and run the function threadCode
-    for (int i = 0; i < numServerThreads; i++)
-    {
+    for (int i = 0; i < numServerThreads; i++) {
         realID[i] = i; //Assign the real ID (from 0 to numServerThreads-1)
         pthread_attr_init(&pt_attr[i]);
         pthread_create(&pt_tid[i], &pt_attr[i], &threadCode, &realID[i]);
@@ -164,8 +159,7 @@ void ServerThreads::createAndStart()
 /// the end of the client application excecution. But do not
 /// modify the results file output, as it is neccesary for evaluation
 
-void ServerThreads::printAndSaveResults(const char* fileName)
-{
+void ServerThreads::printAndSaveResults(const char* fileName) {
     cout << endl << "------Server Results-------" << endl;
     cout << "Requests accepted:\t\t" << countAccepted << endl;
     cout << "Requests sent to wait:\t\t" << countOnWait << endl;
@@ -184,10 +178,8 @@ void ServerThreads::printAndSaveResults(const char* fileName)
 /// You can modify this function if you want to add other fields
 /// to the configuration field, but normally you will not need to
 
-void ServerThreads::readConfigurationFile(const char *fileName)
-{
-    if (!fileExists(fileName))
-    {
+void ServerThreads::readConfigurationFile(const char *fileName) {
+    if (!fileExists(fileName)) {
         cout << "No configuration file " << fileName << " found" << endl;
         exit(1);
     }
@@ -209,8 +201,7 @@ void ServerThreads::readConfigurationFile(const char *fileName)
     Max = new int*[numClients];
     Allocation = new int*[numClients];
     Need = new int*[numClients];
-    for (int i = 0; i < numClients; i++)
-    {
+    for (int i = 0; i < numClients; i++) {
         Max[i] = new int[numResources];
         Allocation[i] = new int[numResources];
         Need[i] = new int[numResources];
@@ -218,8 +209,7 @@ void ServerThreads::readConfigurationFile(const char *fileName)
 
     cfg.lookupValue("initialValuesProvided", initDataProvided);
 
-    if (initDataProvided)
-    {
+    if (initDataProvided) {
         //Initialize the Available and Max structures
         libconfig::Setting& available = cfg.lookup("availableResources");
         libconfig::Setting& maximum = cfg.lookup("maximumPerClient");
@@ -227,14 +217,11 @@ void ServerThreads::readConfigurationFile(const char *fileName)
         for (int i = 0; i < numResources; i++)
             Available[i] = available[i];
 
-        for (int i = 0; i < numClients; i++)
-        {
-            for (int j = 0; j < numResources; j++)
-            {
+        for (int i = 0; i < numClients; i++) {
+            for (int j = 0; j < numResources; j++) {
                 Max[i][j] = maximum[i][j];
                 //Verification
-                if (Max[i][j] > Available[j])
-                {
+                if (Max[i][j] > Available[j]) {
                     cerr << "Invalid maximumPerClient values" << endl;
                     exit(1);
                 }
@@ -248,14 +235,12 @@ void ServerThreads::readConfigurationFile(const char *fileName)
     cout << "Server backlog size: " << serverBacklogSize << endl;
     cout << "Number of clients: " << numClients << endl;
     cout << "Number of resources: " << numResources << endl;
-    if (initDataProvided)
-    {
+    if (initDataProvided) {
         cout << "Available resources at start:" << endl;
         for (int i = 0; i < numResources; i++)
             cout << Available[i] << " ";
         cout << endl << endl;
-    }
-    else
+    } else
         cout << endl << "No initial values provided, needs aditional initialization" << endl;
 }
 
@@ -263,15 +248,13 @@ void ServerThreads::readConfigurationFile(const char *fileName)
 /// The rest of the code is neccesary for the correct functionality
 /// You can add extra stuff, but try to keep the provided code as it is
 
-void ServerThreads::writeMaxToFile()
-{
+void ServerThreads::writeMaxToFile() {
 
     if (!fileExists("temp")) mkdir("temp", 0755);
     if (fileExists("temp/Max")) remove("temp/Max");
     ofstream fs("temp/Max");
 
-    for (int i = 0; i < numClients; i++)
-    {
+    for (int i = 0; i < numClients; i++) {
         for (int j = 0; j < numResources; j++)
             fs << Max[i][j] << " ";
         fs << endl;
@@ -279,16 +262,14 @@ void ServerThreads::writeMaxToFile()
     fs.close();
 }
 
-ServerThreads::ServerThreads()
-{
+ServerThreads::ServerThreads() {
     // General initialization
     realID = NULL;
     pt_tid = NULL;
     pt_attr = NULL;
 }
 
-ServerThreads::~ServerThreads()
-{
+ServerThreads::~ServerThreads() {
     if (realID != NULL)
         delete []realID;
     if (pt_tid != NULL)
@@ -298,10 +279,8 @@ ServerThreads::~ServerThreads()
 
     if (Available != NULL)
         delete []Available;
-    if (Max != NULL)
-    {
-        for (int i = 0; i < numResources; i++)
-        {
+    if (Max != NULL) {
+        for (int i = 0; i < numResources; i++) {
             delete []Max[i];
             delete []Allocation[i];
             delete []Need[i];

@@ -15,10 +15,10 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 //Socket implementation libraries
-#include <sys/types.h> 
+#include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <netdb.h> 
+#include <netdb.h>
 //Read and write of files
 #include <fstream>
 #include <ostream>
@@ -32,13 +32,14 @@ void error(const char *msg) {
     exit(1);
 }
 
+const int ACCEPTED = 0,
+        INVALID = -1;
+
 //Return true if the specified file exist
 
 bool fileExists(const char *fileName) {
     struct stat fileExistTest;
     return (stat(fileName, &fileExistTest) == 0);
 }
-
-
 
 #endif // COMMON_H

@@ -1,7 +1,10 @@
 all: client server
 
-CXXFLAGS += -lconfig++ -pthread
+CXXFLAGS += -g -lconfig++ -pthread
 
-client: clientThread.cpp client.cpp
+client: client.cpp
 
 server: serverThreads.cpp server.cpp
+
+clean:
+	rm -f client server

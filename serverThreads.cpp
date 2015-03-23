@@ -16,9 +16,12 @@ void ServerThreads::initializationOfDataStructures() {
 
     if (!initDataProvided) {
 
-        // On initialise a quelle valeur pour Available???
-
-
+        for (int j = 0; j < numResources; j++) {
+            Available[j] = rand() % (3 * numClients);
+            for (int i = 0; i < numClients; i++) {
+                Max[i][j] = rand % Available[j];
+            }
+        }
     }
 
     /// TP2_END_TO_DO
@@ -34,7 +37,8 @@ void ServerThreads::initializationOfDataStructures() {
 /// to the client as specifid on the TP2
 
 void ServerThreads::processRequest(int threadID, int socketFD) {
-    /// TP2_TO_DO
+    /// TP2_TO_DO : Flush le socket!
+
 
     int buffer_size = 10 + 12 * ClientThread::numResources;
     char buffer[buffer_size];
@@ -48,6 +52,7 @@ void ServerThreads::processRequest(int threadID, int socketFD) {
     int clientID = atoi(strtok_r(buffer, ' ', &next));
     int request[numResources];
 
+    //On suppose que la requete a la bonne forme, sinon crash.
     for (int i = 0; i < numResources; i++) {
         //parser le buffer ici, on flip la valeur pour faciliter le traitement
         request[i] = -atoi(strtok_r(NULL, ' ', &next));

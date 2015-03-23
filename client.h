@@ -39,8 +39,9 @@ public:
      * 
      * @param requestID
      * @param socketFD
+     * @return la réponse du serveur
      */
-    void send(int request_id, int sock);
+    int send(int request_id, int sock);
 
     /**
      * Lance un thread client
@@ -66,6 +67,16 @@ private:
     static int countOnWait; // Result counter for total request denied and put to wait
     static int countInvalid; // Result counter for total invalid requests
     static int countClientsDispatched; // Result counter for total clients correctly finished
+
+    /**
+     * Vérouille la connection et l'écriture sur une stream.
+     */
+    static pthread_mutex_t connect_lock;
+
+    /**
+     * Limite le nombre de threads qui peuvent ouvrir le socket.
+     */
+    static sem_t open_limit;
 
     static int count; // Common counter of created ClienThread to asign an ID
 };

@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <semaphore.h>
 #include <iostream>
 #include <time.h>
 //Libconfig libraries to read configuration from file
@@ -28,8 +29,7 @@ using namespace std;
 /**
  * Outputs a readable error message and exits the program
  */
-void error(const char *msg)
-{
+void error(const char *msg) {
     perror(msg);
     exit(1);
 }
@@ -39,8 +39,7 @@ const int ACCEPTED = 0,
 
 //Return true if the specified file exist
 
-bool fileExists(const char *fileName)
-{
+bool fileExists(const char *fileName) {
     struct stat fileExistTest;
     return (stat(fileName, &fileExistTest) == 0);
 }

@@ -4,11 +4,12 @@
 
 /**
  * Envoi d'une requête du client sur le socket.
- * 
+ *
  * @param requestID
  * @param socket
  */
-void Client::send(int requestID, int socket) {
+int Client::send(int requestID, int socket)
+{
     cout << "Client " << this->id << " is sending its " << requestID << " request" << endl;
 
     /*
@@ -21,13 +22,17 @@ void Client::send(int requestID, int socket) {
     request[0] = this->id;
 
     // on remplit la requête à partir de demandes et de libération aléatoires
-    for (int i = 0; i < Client::numResources; i++) {
-        if (rand() % 2) {
+    for (int i = 0; i < Client::numResources; i++)
+    {
+        if (rand() % 2)
+        {
             // allocation de ressources
             request[i + 1] = -(rand() % (Client::Max[this->id][i] - this->acquired[i]));
-        } else {
+        }
+        else
+        {
             // libération de ressources
-            request[i + 1] = rand() % this->acquired[i]; // ...?
+            request[i + 1] = this->acquired[i] > 0 ? (rand() % this->acquired[i]) : 0; // ...?
         }
     }
 
@@ -41,55 +46,55 @@ void Client::send(int requestID, int socket) {
 
     ssize_t written = write(socket, request, sizeof (request));
 
-    if (written < sizeof (request)) {
+    if (written < sizeof (request))
+    {
         error("couldn't write bytes in the socket (written %d out of %d)");
     }
 
     // lecture de la réponse du serveur
     int response;
 
-    do {
-        read(socket, &response, sizeof (response));
+    read(socket, &response, sizeof (response));
 
-        if (response > 0)
-            countOnWait++;
-
-        // attente jusqu'à réponse du serveur
-        if (response > 0)
-            usleep(response * 1000);
-
-    } while (response > 0);
-
-    // accepted or invalid
-    if (response == ACCEPTED) {
+    switch (response)
+    {
+    case ACCEPTED:
         // application de la transaction sur les données acquises
-        for (int i = 0; i < Client::numResources; i++) {
+        for (int i = 0; i < Client::numResources; i++)
+        {
             this->acquired[i] += request[i + 1];
         }
         countAccepted++;
-    }
-
-    if (response == INVALID) {
+        break;
+    case INVALID:
         cout << "client " << this->id << ": request " << id << ": INVALID";
         countInvalid++;
+        break;
+    default:
+        countOnWait++;
     }
+
+    return response;
 }
 
 /**
  * Code du thread client.
- * 
- * Chaque client ouvre une connection sur le socket et transmet sa requête au 
+ *
+ * Chaque client ouvre une connection sur le socket et transmet sa requête au
  * serveur.
- * 
+ *
  * La communication se fait sur un socket TCP/IP à l'adresse "localhost".
- * 
+ *
  * @param param
- * @return 
+ * @return
  */
-void *Client::run(void * param) {
+void* Client::run(void * param)
+{
     Client* client = (Client*) param;
 
-    cout << "client " << client->id << " running!" << endl;
+    sem_wait(&Client::open_limit);
+
+    cout << "client " << client->id << " acquired the open semaphore" << endl;
 
     int sock = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
     sockaddr_in addr;
@@ -102,25 +107,38 @@ void *Client::run(void * param) {
     addr.sin_port = htons(port);
 
     // transmit clientID
-    for (int request_id = 0; request_id < numRequests; request_id++) {
+    for (int request_id = 0; request_id < numRequests; request_id++)
+    {
         //Start creating conextions to send the request
 
-        // connect on the socket
-        while (connect(sock, (sockaddr*) & addr, sizeof (addr)) < 0)
-            usleep(300); // attendre 300 µs avant la prochaine connexion
+        int response;
 
-        cout << "client " << client->id << ": connexion établie avec le serveur" << endl;
+        do
+        {
+            pthread_mutex_lock(&Client::connect_lock);
 
-        /**
-         * Envoi de la requête.
-         * 
-         * @param param
-         * @return 
-         */
-        client->send(request_id, sock);
+            // connect on the socket
+            while (connect(sock, (sockaddr*) & addr, sizeof (addr)) < 0)
+                usleep(300); // attendre 300 µs avant la prochaine connexion
+
+            cout << "client " << client->id << ": connexion établie avec le serveur" << endl;
+
+            // envoi de la requête
+            response = client->send(request_id, sock);
+
+            pthread_mutex_unlock(&Client::connect_lock);
+
+            // attente jusqu'à réponse du serveur
+            if (response > 0)
+                usleep(response * 1000);
+
+        }
+        while (response > 0);
     }
 
     close(sock);
+
+    sem_post(&Client::open_limit);
 
     pthread_exit(NULL);
 }
@@ -129,7 +147,8 @@ void *Client::run(void * param) {
 /// the end of the client application excecution. But do not
 /// modify the result file output, as it is neccesary for evaluation
 
-void Client::printAndSaveResults(const char* fileName) {
+void Client::printAndSaveResults(const char* fileName)
+{
     cout << endl << "------Client Results-----" << endl;
     cout << "Requests accepted:\t\t" << countAccepted << endl;
     cout << "Requests sent to wait:\t\t" << countOnWait << endl;
@@ -150,8 +169,10 @@ void Client::printAndSaveResults(const char* fileName) {
  * @param fileName
  * @return
  */
-int Client::readConfigurationFile(const char *fileName) {
-    if (!fileExists(fileName)) {
+int Client::readConfigurationFile(const char *fileName)
+{
+    if (!fileExists(fileName))
+    {
         cout << "No configuration file " << fileName << " found" << endl;
         exit(1);
     }
@@ -175,13 +196,16 @@ int Client::readConfigurationFile(const char *fileName) {
 /// The rest of the code is neccesary for the correct functionality
 /// You can add extra stuff, but try to keep the provided code as it is
 
-void Client::readMaxFromFile() {
+void Client::readMaxFromFile()
+{
     fstream fs;
-    if (fileExists("temp/Max")) {
+    if (fileExists("temp/Max"))
+    {
         fs.open("temp/Max", fstream::in);
 
         for (int i = 0; i < numClients; i++)
-            for (int j = 0; j < numResources; j++) {
+            for (int j = 0; j < numResources; j++)
+            {
                 fs >> Max[i][j];
             }
 
@@ -189,12 +213,17 @@ void Client::readMaxFromFile() {
     }
 }
 
-Client::Client() {
+Client::Client()
+{
     this->id = count++;
+    pthread_mutex_init(&Client::connect_lock, NULL);
+    sem_init(&Client::open_limit, 0, 10);
 }
 
-Client::~Client() {
-    if (Max != NULL) {
+Client::~Client()
+{
+    if (Max != NULL)
+    {
         for (int i = 0; i < numResources; i++)
             delete []Max[i];
         delete []Max;
@@ -215,17 +244,21 @@ int Client::countAccepted = 0;
 int Client::countOnWait = 0;
 int Client::countInvalid = 0;
 int Client::countClientsDispatched = 0;
+pthread_mutex_t Client::connect_lock;
+sem_t Client::open_limit;
 
 int **Client::Max = NULL;
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
     //Read the parameters from the configuration file specified
     int n = Client::readConfigurationFile("initValues.cfg");
 
     // nombre de threads instanciés
     Client client[n];
 
-    for (int i = 0; i < n; i++) {
+    for (int i = 0; i < n; i++)
+    {
         client[i].id = i;
         pthread_create(&(client[i].pt_tid), NULL, &(Client::run), (void*) &client);
     }

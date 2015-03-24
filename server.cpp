@@ -77,7 +77,7 @@ void ServerThreads::processRequest(int threadID, int sockfd)
 
     pthread_mutex_lock(&ServerThreads::available_lock);
     for (int i = 0; i < numResources; i++) {
-        if (request[i + 1] <= Max[clientID][i] && request[i+1]>= -Allocation[clientID][i]) {
+        if (request[i + 1] <= Max[clientID][i] && request[i+1] < -Allocation[clientID][i]) {
 
             if (request[i + 1] > Available[i])
             {

@@ -40,7 +40,7 @@ void ServerThreads::initializationOfDataStructures() {
 void ServerThreads::processRequest(int threadID, int sock) {
     // contient la requête du client
     int request[1 + numResources] = new int[1 + numResources];
-    bzero(request, sizeof (int) * (1+numResources));
+    bzero(&request, sizeof (int) * (1+numResources));
     
     pthread_mutex_lock(&accept_lock);
     // lecture de la requête du client
@@ -112,7 +112,7 @@ void ServerThreads::processRequest(int threadID, int sock) {
     if (answer == 0)
         requestProcesed++;
     
-    pthread_mutex_unlock(available_lock);
+    pthread_mutex_unlock(&available_lock);
     
 }
 

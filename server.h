@@ -1,6 +1,9 @@
 #ifndef SERVERTHREADS_H
 #define SERVERTHREADS_H
 
+#include "common.h"
+
+
 //POSIX library for threads
 #include <pthread.h>
 #include <unistd.h>
@@ -15,7 +18,6 @@ public:
     void initializationOfDataStructures();
     static void processRequest(int threadID, int socketFD);
     void printAndSaveResults(const char* fileName);
-    void signalFinishToClient();
 
 private:
     //Internal server parameters
@@ -27,7 +29,7 @@ private:
     static int numRequestsPerClient; // Number of requests to be received by each client
     bool initDataProvided;
 
-    static int serverSocketFD; // Main server Socket File Descriptor
+    static int sock; // Main server Socket File Descriptor
     static int maxWaitTime; // Maximum number of seconds that the server program will run
     static int requestProcesed; // Number of request already processed
     static int totalNumRequests; // Total number of request to be processed (numClients*numRequestPerClient)

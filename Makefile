@@ -1,7 +1,13 @@
 all: client server
 
-CXXFLAGS += -lconfig++ -pthread
+CXXFLAGS += -g -lconfig++ -pthread
 
-client: clientThread.cpp client.cpp
+client: client.cpp
 
-server: serverThreads.cpp server.cpp
+server: server.cpp
+
+rapport.pdf: rapport.md
+	pandoc --latex-engine=xelatex $< -o $@
+
+clean:
+	rm -f client server

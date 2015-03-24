@@ -65,7 +65,7 @@ void ServerThreads::processRequest(int threadID, int sock)
     //Traitement de la requete
     // C'est une requete qui demande des ressources
     // Algorithme du Banquier!
-    int answerToClient = 0; ///On suppose la requête valide
+    int answer = 0; ///On suppose la requête valide
     for (int i = 0; i < numResources; i++)
     {
         if (request[i + 1] <= Max[clientID][i])
@@ -73,7 +73,7 @@ void ServerThreads::processRequest(int threadID, int sock)
             if (request[i + 1] > Available[i])
             {
                 //Not enough ressources, waiting time as answer. 1000 pour l'instant.
-                answerToClient = 1000;
+                answer = 1000;
                 countOnWait++;
                 break;
             }
@@ -82,12 +82,12 @@ void ServerThreads::processRequest(int threadID, int sock)
         else
         {
             //Invalid request
-            answerToClient = -1;
+            answer = -1;
             countInvalid++;
             break;
         }
     }
-    if (answerToClient == 0)
+    if (answer == 0)
     {
         for (int i = 0; i < numResources; i++)
         {
@@ -97,7 +97,7 @@ void ServerThreads::processRequest(int threadID, int sock)
         countAccepted++;
 
     }
-    else if (answerToClient > 0)
+    else if (answer > 0)
     {
 
         for (int i = 0; i < numResources; i++)
@@ -107,11 +107,13 @@ void ServerThreads::processRequest(int threadID, int sock)
 
     }
 
-    if (write(sock, &answerToClient, sizeof (int)) < 0)
+    if (write(sock, &answer, sizeof (int)) < 0)
         error("ERROR writing to socket");
 
+    cout << "server " << threadID << ": written " << answer << " to client " << clientID << endl;
+
     // considère que la requête est processé
-    if (answerToClient == 0)
+    if (answer == 0)
         requestProcesed++;
 }
 
@@ -125,45 +127,38 @@ void* ServerThreads::threadCode(void * param)
 
     struct sockaddr_in thread_addr;
     socklen_t threadSL = sizeof (thread_addr); //Thread socket lenght
-    int threadSocketFD = -1;
     int start = time(NULL);
 
-    // Loop until accept() returns the first valid conection
-    pthread_mutex_lock(&ServerThreads::accept_lock);
-
-    while (threadSocketFD < 0)
-    {
-        threadSocketFD = accept(sock,
-                                (struct sockaddr *) &thread_addr,
-                                &threadSL);
-
-        if ((time(NULL) - start) >= maxWaitTime ||
-                requestProcesed == totalNumRequests)
-            break;
-    }
-
     // Now loop until the server has completely dispatched all clients
-    while (requestProcesed < totalNumRequests)
+    do
     {
+        // Loop until accept() returns the first valid conection
+        pthread_mutex_lock(&ServerThreads::accept_lock);
 
-        if ((time(NULL) - start) >= maxWaitTime)
+        // accept a new connection
+        int thread_fd;
+        while ((thread_fd = accept(sock, (struct sockaddr *) &thread_addr, &threadSL)) < 0)
         {
-            cerr << "Time out on thread " << ID << endl;
-            pthread_exit(NULL);
+            if ((time(NULL) - start) >= maxWaitTime)
+            {
+                cerr << "Time out on thread " << ID << endl;
+                pthread_mutex_unlock(&ServerThreads::accept_lock);
+                pthread_exit(NULL);
+            }
         }
 
-        if (threadSocketFD > 0)
-        {
-            // Process request from connection
-            processRequest(ID, threadSocketFD);
-            close(threadSocketFD);
-        }
+        pthread_mutex_unlock(&ServerThreads::accept_lock);
 
-        //Take next conextion available
-        threadSocketFD = accept(sock,
-                                (struct sockaddr *) &thread_addr,
-                                &threadSL);
+        cout << "thread " << ID << " with FD " << thread_fd << endl;
+
+        // Process request from connection
+        processRequest(ID, thread_fd);
+
+        close(thread_fd);
     }
+
+    while (requestProcesed < totalNumRequests);
+
 }
 
 /// Do not modify this function

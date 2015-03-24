@@ -35,21 +35,14 @@ public:
     ~Client();
 
     /**
-     * Envoit une requête au serveur.
+     * Lance un thread client.
      * 
-     * @param requestID
-     * @param socketFD
-     * @return la réponse du serveur
-     */
-    int send(int request_id, int sock);
-
-    /**
-     * Lance un thread client
+     * Le thread s'occupe d'effectuer des connections au serveur.
      * 
      * @param param
      * @return 
      */
-    static void *run(void * param);
+    static void *run(void* param);
 
     static void printAndSaveResults(const char* fileName);
     static int readConfigurationFile(const char *fileName);
@@ -71,7 +64,7 @@ private:
     /**
      * Vérouille la connection et l'écriture sur une stream.
      */
-    static pthread_mutex_t connect_lock;
+    static pthread_mutex_t results_lock;
 
     /**
      * Limite le nombre de threads qui peuvent ouvrir le socket.

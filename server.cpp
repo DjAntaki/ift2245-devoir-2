@@ -182,7 +182,7 @@ void* ServerThreads::threadCode(void * param)
         // one fd per connection, this one is done
         close(thread_fd);
     }
-    while (requestProcesed < totalNumRequests);
+    while (requestProcesed <= totalNumRequests);
 
 }
 

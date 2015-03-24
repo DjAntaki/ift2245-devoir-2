@@ -24,7 +24,7 @@ public:
      * 
      * Ceci est de taille numResources.
      */
-    int acquired[];
+    int* acquired;
 
     static int port;
     static int numClients;

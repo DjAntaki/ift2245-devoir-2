@@ -213,6 +213,7 @@ void Client::readMaxFromFile()
 Client::Client()
 {
     this->id = count++;
+    this->acquired = new int[numResources];
     bzero(this->acquired, sizeof (int) * numResources);
 }
 

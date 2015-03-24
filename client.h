@@ -48,6 +48,16 @@ public:
     static int readConfigurationFile(const char *fileName);
     static void readMaxFromFile();
 
+    /**
+     * Vérouille la connection et l'écriture sur une stream.
+     */
+    static pthread_mutex_t results_lock;
+
+    /**
+     * Limite le nombre de threads qui peuvent ouvrir le socket.
+     */
+    static sem_t open_limit;
+
 private:
 
     /**
@@ -61,15 +71,6 @@ private:
     static int countInvalid; // Result counter for total invalid requests
     static int countClientsDispatched; // Result counter for total clients correctly finished
 
-    /**
-     * Vérouille la connection et l'écriture sur une stream.
-     */
-    static pthread_mutex_t results_lock;
-
-    /**
-     * Limite le nombre de threads qui peuvent ouvrir le socket.
-     */
-    static sem_t open_limit;
 
     static int count; // Common counter of created ClienThread to asign an ID
 };

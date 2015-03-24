@@ -34,21 +34,24 @@ void ServerThreads::initializationOfDataStructures() {
 /**
  * Traite une requête d'un client.
  *
- * @param threadID
- * @param socketFD
+ * @param threadID ID du thread do serveur (devrait être propre à l'object)
+ * @param socketFD descipteur de fichier pour communiquer avec le client
+ * @return la réponse retournée au client
  */
-void ServerThreads::processRequest(int threadID, int sock) {
+void ServerThreads::processRequest(int threadID, int sockfd)
+{
     // contient la requête du client
     int request[1 + numResources];
     request = new int[1 + numResources];
     bzero(&request, sizeof (int) * (1+numResources));
-    
+
     pthread_mutex_lock(&accept_lock);
     // lecture de la requête du client
-    int n = read(sock, request, (1 + numResources) * sizeof (int));
-    
+    //
+    int n = read(sockfd, request, (1 + numResources) * sizeof (int));
+
     pthread_mutex_unlock(&accept_lock);
-    
+
     if (n < 0)
         error("ERROR reading from socket");
 
@@ -60,6 +63,8 @@ void ServerThreads::processRequest(int threadID, int sock) {
         cout << " " << request[i];
 
     cout << endl;
+
+    // TODO: mutex sur l'algorithme du Banquier
 
     //Traitement de la requete
     // C'est une requete qui demande des ressources
@@ -103,25 +108,33 @@ void ServerThreads::processRequest(int threadID, int sock) {
         }
 
     }
-    
-    if (write(sock, &answer, sizeof (int)) < 0)
-        error("ERROR writing to socket");
+
+    // écrit un entier pour répondre au client
+    if (write(sockfd, &answer, sizeof (int)) < 0)
+        error("could not respond to client");
 
     cout << "server " << threadID << ": written " << answer << " to client " << clientID << endl;
+
+    // le client devrait avoir terminé à ce point et commencé à traiter une
+    // nouvelle requête
 
     // considère que la requête est processé
     if (answer == 0)
         requestProcesed++;
-    
+
     pthread_mutex_unlock(&available_lock);
-    
+
 }
 
 /// Do not modify this function
 /// Rather use it as an example of socket functonality
 /// to do the conections on the clients
 
-void* ServerThreads::threadCode(void * param) {
+/**
+ * Code du thread du serveur.
+ */
+void* ServerThreads::threadCode(void * param)
+{
     int ID = *((int*) param);
 
     struct sockaddr_in thread_addr;
@@ -135,8 +148,10 @@ void* ServerThreads::threadCode(void * param) {
 
         // accept a new connection
         int thread_fd;
-        while ((thread_fd = accept(sock, (struct sockaddr *) &thread_addr, &threadSL)) < 0) {
-            if ((time(NULL) - start) >= maxWaitTime) {
+        while ((thread_fd = accept(sock, (struct sockaddr *) &thread_addr, &threadSL)) < 0)
+        {
+            if ((time(NULL) - start) >= timeout)
+            {
                 cerr << "Time out on thread " << ID << endl;
                 pthread_mutex_unlock(&ServerThreads::accept_lock);
                 pthread_exit(NULL);
@@ -150,6 +165,7 @@ void* ServerThreads::threadCode(void * param) {
         // Process request from connection
         processRequest(ID, thread_fd);
 
+        // one fd per connection, this one is done
         close(thread_fd);
     } while (requestProcesed < totalNumRequests);
 
@@ -169,11 +185,11 @@ void ServerThreads::createAndStart() {
     bzero((char *) &serv_addr, sizeof (serv_addr));
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_addr.s_addr = INADDR_ANY;
-    serv_addr.sin_port = htons(portNumber);
+    serv_addr.sin_port = htons(port);
     if (bind(sock, (struct sockaddr *) &serv_addr, sizeof (serv_addr)) < 0)
         error("ERROR on binding");
 
-    listen(sock, serverBacklogSize);
+    listen(sock, backlog);
 
     //Create the thread variables
     realID = new int[numServerThreads];
@@ -224,10 +240,11 @@ void ServerThreads::readConfigurationFile(const char *fileName) {
     libconfig::Config cfg;
     cfg.readFile(fileName);
 
-    cfg.lookupValue("portNumber", portNumber);
-    cfg.lookupValue("maxWaitTime", maxWaitTime);
+    cfg.lookupValue("portNumber", port);
+    cfg.lookupValue("maxWaitTime", timeout);
+    cfg.lookupValue("serverBacklogSize", backlog);
+
     cfg.lookupValue("serverThreads", numServerThreads);
-    cfg.lookupValue("serverBacklogSize", serverBacklogSize);
     cfg.lookupValue("numClients", numClients);
     cfg.lookupValue("numResources", numResources);
     cfg.lookupValue("numRequestsPerClient", numRequestsPerClient);
@@ -268,9 +285,9 @@ void ServerThreads::readConfigurationFile(const char *fileName) {
     }
 
     cout << "Server started with configuration: " << endl << endl;
-    cout << "Maximum wait time: " << maxWaitTime << endl;
+    cout << "Maximum wait time: " << timeout << endl;
     cout << "Number of server threads: " << numServerThreads << endl;
-    cout << "Server backlog size: " << serverBacklogSize << endl;
+    cout << "Server backlog size: " << backlog << endl;
     cout << "Number of clients: " << numClients << endl;
     cout << "Number of resources: " << numResources << endl;
     if (initDataProvided) {
@@ -341,7 +358,7 @@ int ServerThreads::numRequestsPerClient;
 //Initialization of static variables
 int ServerThreads::requestProcesed = 0;
 int ServerThreads::totalNumRequests = 0;
-int ServerThreads::maxWaitTime = 0;
+int ServerThreads::timeout = 0;
 int ServerThreads::sock = -1;
 
 // Initialization of result variables
@@ -363,7 +380,7 @@ int main(int argc, char *argv[]) {
     //Read the parameters from the configuration file specified
     server.readConfigurationFile("initValues.cfg");
 
-    //Fill the Banker's Algorithm data structures with 
+    //Fill the Banker's Algorithm data structures with
     //whatever you think convenient
     server.initializationOfDataStructures();
 

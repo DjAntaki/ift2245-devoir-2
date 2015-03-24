@@ -73,17 +73,11 @@ void ServerThreads::processRequest(int threadID, int sockfd)
     // C'est une requete qui demande des ressources
     // Algorithme du Banquier!
     //
-    //Petite correspondances
-    // 0 : Accepted
-    // 1 : Waited
-    // 2 : Invalid
     int answer = 0; ///On suppose la requête valide
 
     pthread_mutex_lock(&ServerThreads::available_lock);
-    for (int i = 0; i < numResources; i++)
-    {
-        if (request[i + 1] <= Max[clientID][i])
-        {
+    for (int i = 0; i < numResources; i++) {
+        if (request[i + 1] <= Max[clientID][i] && request[i+1]>= -Allocation[i]) {
 
             if (request[i + 1] > Available[i])
             {
@@ -91,7 +85,7 @@ void ServerThreads::processRequest(int threadID, int sockfd)
                 answer = 1000;
                 countOnWait++;
                 break;
-            }
+            } 
 
         }
         else

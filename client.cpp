@@ -39,12 +39,12 @@ int Client::send(int requestID, int socket)
     cout << "client " << this->id << " request: " << requestID << " ";
 
     // impression de la requête
-    for (int i = 2; i < sizeof (request); i++)
+    for (int i = 1; i < 1 + numResources; i++)
         cout << " " << request[i];
 
     cout << endl;
 
-    ssize_t written = write(socket, request, sizeof (request));
+    ssize_t written = write(socket, request, (1 + numResources) * sizeof (int));
 
     if (written < sizeof (request))
     {
@@ -54,7 +54,7 @@ int Client::send(int requestID, int socket)
     // lecture de la réponse du serveur
     int response;
 
-    read(socket, &response, sizeof (response));
+    read(socket, &response, sizeof (int));
 
     switch (response)
     {
@@ -136,6 +136,7 @@ void* Client::run(void * param)
         while (response > 0);
     }
 
+    // ferme le socket pour libérer une ressource
     close(sock);
 
     sem_post(&Client::open_limit);
@@ -249,7 +250,7 @@ sem_t Client::open_limit;
 
 int **Client::Max = NULL;
 
-int main(int argc, char *argv[])
+int main(void)
 {
     //Read the parameters from the configuration file specified
     int n = Client::readConfigurationFile("initValues.cfg");
@@ -259,8 +260,7 @@ int main(int argc, char *argv[])
 
     for (int i = 0; i < n; i++)
     {
-        client[i].id = i;
-        pthread_create(&(client[i].pt_tid), NULL, &(Client::run), (void*) &client);
+        pthread_create(&(client[i].pt_tid), NULL, &(Client::run), (void*) &(client[i]));
     }
 
     // on attend que tous les threads clients terminent

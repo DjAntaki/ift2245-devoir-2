@@ -29,6 +29,11 @@ private:
     static int numRequestsPerClient; // Number of requests to be received by each client
     bool initDataProvided;
 
+    /**
+     * Vérouille!
+     */
+    static pthread_mutex_t accept_lock;
+
     static int sock; // Main server Socket File Descriptor
     static int maxWaitTime; // Maximum number of seconds that the server program will run
     static int requestProcesed; // Number of request already processed

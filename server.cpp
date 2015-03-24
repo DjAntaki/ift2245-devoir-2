@@ -42,7 +42,7 @@ void ServerThreads::processRequest(int threadID, int sock)
     int request[1 + numResources];
 
     // lecture de la requête du client
-    int n = read(sock, request, 1 + numResources);
+    int n = read(sock, request, (1 + numResources) * sizeof (int));
 
     if (n < 0)
         error("ERROR reading from socket");
@@ -51,8 +51,8 @@ void ServerThreads::processRequest(int threadID, int sock)
 
     printf("thread %u handling request from client %u", threadID, clientID);
 
-    for (int i = 1; i <= numResources; i++)
-        cout << " " + request[i];
+    for (int i = 1; i < 1 + numResources; i++)
+        cout << " " << request[i];
 
     cout << endl;
 
@@ -123,6 +123,8 @@ void* ServerThreads::threadCode(void * param)
     int start = time(NULL);
 
     // Loop until accept() returns the first valid conection
+    pthread_mutex_lock(&ServerThreads::accept_lock);
+
     while (threadSocketFD < 0)
     {
         threadSocketFD = accept(sock,
@@ -323,6 +325,7 @@ ServerThreads::ServerThreads()
     realID = NULL;
     pt_tid = NULL;
     pt_attr = NULL;
+    pthread_mutex_init(&ServerThreads::accept_lock, NULL);
 }
 
 ServerThreads::~ServerThreads()
@@ -373,6 +376,8 @@ int* ServerThreads::Available = NULL;
 int** ServerThreads::Max = NULL;
 int** ServerThreads::Allocation = NULL;
 int** ServerThreads::Need = NULL;
+
+pthread_mutex_t ServerThreads::accept_lock;
 
 int main(int argc, char *argv[])
 {

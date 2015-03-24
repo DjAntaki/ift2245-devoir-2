@@ -41,6 +41,13 @@ void* Client::run(void * param)
         // le premier entier correspond au ID du client
         request[0] = client->id;
 
+        cout << "client " << client->id << ": request " << request_id << ": acquired resources";
+
+        for (int i = 0; i < Client::numResources; i++)
+            cout << " " << client->acquired[i];
+
+        cout << endl;
+
         // on remplit la requête à partir de demandes et de libération aléatoires
         bool acquisition = rand() % 2;
 
@@ -127,6 +134,8 @@ void* Client::run(void * param)
     close(sock);
 
     sem_post(&Client::open_limit);
+
+    cout << "client " << client->id << ": finished processing" << endl;
 
     pthread_exit(NULL);
 }
@@ -232,7 +241,7 @@ int Client::countAccepted = 0;
 int Client::countOnWait = 0;
 int Client::countInvalid = 0;
 int Client::countClientsDispatched = 0;
-pthread_mutex_t Client::results_lock;
+pthread_mutex_t Client::results_lock = PTHREAD_MUTEX_INITIALIZER;
 sem_t Client::open_limit;
 
 int **Client::Max = NULL;
@@ -242,8 +251,7 @@ int main(void)
     //Read the parameters from the configuration file specified
     int n = Client::readConfigurationFile("initValues.cfg");
 
-    // initialisation des mutex/sémaphore
-    pthread_mutex_init(&Client::results_lock, NULL);
+    // initialisation de la mutex
     sem_init(&Client::open_limit, 0, 512);
 
     // nombre de threads instanciés

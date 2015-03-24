@@ -60,3 +60,9 @@ Un seul socket s'occupe de la communication entre les fils d'exécutions clients
 En terme d'opéraito
 Les clients utilisent `connect` et le
 
+Pour garantir que le système ne finira jamais en _deadlock_, nous avons pris
+soin de :
+
+ - ne pas créer de cycle de verrou
+ - appliquer l'algorithme du Banquier et ne jamais transiter vers un état
+   _unsafe_

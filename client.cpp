@@ -204,6 +204,7 @@ void Client::readMaxFromFile()
 Client::Client()
 {
     this->id = count++;
+    this->acquired = new int[numResources];
     bzero(&this->acquired, sizeof (int) * numResources);
 }
 
@@ -256,7 +257,7 @@ int main(void)
     // on attend que tous les threads clients terminent
     for (int i = 0; i < n; i++)
         pthread_join(client[i].pt_tid, NULL);
-
+    
     /// Do not erase or modify this part
     Client::printAndSaveResults("temp/resultsClient");
 

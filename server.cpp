@@ -15,7 +15,6 @@ void ServerThreads::initializationOfDataStructures() {
 
     if (!initDataProvided) {
 
-        // On initialise a quelle valeur pour Available???
         for (int i = 0; i < numResources; i++) {
             Available[i] = rand() % (2 * numClients);
             for (int j = 0; j < numClients; j++) {
@@ -24,9 +23,6 @@ void ServerThreads::initializationOfDataStructures() {
         }
     }
 
-    bzero(responses, numServerThreads * 3 * sizeof(int));
-    cout << "initialisation de la variable static reponses : " << responses;
-    pthread_mutex_init(&ServerThreads::available_lock, NULL);
     /// TP2_END_TO_DO
 
     ///DO NOT ERASE THIS PART
@@ -309,6 +305,7 @@ ServerThreads::ServerThreads() {
     pt_tid = NULL;
     pt_attr = NULL;
     pthread_mutex_init(&ServerThreads::accept_lock, NULL);
+    pthread_mutex_init(&ServerThreads::available_lock, NULL);
 }
 
 ServerThreads::~ServerThreads() {

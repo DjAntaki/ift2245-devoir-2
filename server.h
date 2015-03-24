@@ -41,7 +41,6 @@ private:
     static int maxWaitTime; // Maximum number of seconds that the server program will run
     static int requestProcesed; // Number of request already processed
     static int totalNumRequests; // Total number of request to be processed (numClients*numRequestPerClient)
-    static int responses[][] = new int[numServerThreads][3]; 
     
     //Banker's Algorithm data structures (see the book for further details)
     static int *Available;

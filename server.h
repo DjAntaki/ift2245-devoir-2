@@ -7,6 +7,8 @@
 //POSIX library for threads
 #include <pthread.h>
 #include <unistd.h>
+#include <stdlib.h>
+#include <map>
 
 class ServerThreads {
 public:
@@ -32,13 +34,15 @@ private:
     /**
      * Vérouille!
      */
+    static pthread_mutex_t available_lock;
     static pthread_mutex_t accept_lock;
 
     static int sock; // Main server Socket File Descriptor
     static int maxWaitTime; // Maximum number of seconds that the server program will run
     static int requestProcesed; // Number of request already processed
     static int totalNumRequests; // Total number of request to be processed (numClients*numRequestPerClient)
-
+    static int responses[][] = new int[numServerThreads][3]; 
+    
     //Banker's Algorithm data structures (see the book for further details)
     static int *Available;
     static int **Max;

@@ -125,12 +125,13 @@ void ServerThreads::processRequest(int threadID, int sockfd)
 
     // considère que la requête est processé
     if (answer[0] <= 0)
-        requestProcesed++;
+        requestProcessed++;
 
     pthread_mutex_unlock(&available_lock);
 
     cout << "server " << threadID << ": written " << answer[0] << " to client " << clientID << endl;
-
+    cout << "Total processed request " << requestProcessed << "/" << totalNumRequests << endl;
+    
     // écrit un entier pour répondre au client
     if (write(sockfd, &answer, sizeof (int)) < 0)
         error("could not respond to client");
@@ -182,8 +183,9 @@ void* ServerThreads::threadCode(void * param)
         // one fd per connection, this one is done
         close(thread_fd);
     }
-    while (requestProcesed <= totalNumRequests);
+    while (requestProcessed < totalNumRequests);
 
+    pthread_exit(NULL);
 }
 
 /// Do not modify this function
@@ -236,7 +238,7 @@ void ServerThreads::printAndSaveResults(const char* fileName)
     cout << "Requests sent to wait:\t\t" << countOnWait << endl;
     cout << "Invalid requests:\t\t" << countInvalid << endl;
     cout << "Clients dispatched:\t\t" << countClientsDispatched << endl;
-    cout << "Total requests proccesed:\t" << requestProcesed << endl;
+    cout << "Total requests proccesed:\t" << requestProcessed << endl;
 
     ///DO NOT MODIFY THIS PART
     // Save the counted values for evaluation
@@ -390,7 +392,7 @@ int ServerThreads::numClients;
 int ServerThreads::numResources;
 int ServerThreads::numRequestsPerClient;
 //Initialization of static variables
-int ServerThreads::requestProcesed = 0;
+int ServerThreads::requestProcessed = 0;
 int ServerThreads::totalNumRequests = 0;
 int ServerThreads::timeout = 0;
 int ServerThreads::sock = -1;

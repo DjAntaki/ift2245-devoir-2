@@ -38,7 +38,7 @@ private:
 
     static int sock; // Main server Socket File Descriptor
     static int timeout; // Maximum number of seconds that the server program will run
-    static int requestProcesed; // Number of request already processed
+    static int requestProcessed; // Number of request already processed
     static int totalNumRequests; // Total number of request to be processed (numClients*numRequestPerClient)
     
     //Banker's Algorithm data structures (see the book for further details)

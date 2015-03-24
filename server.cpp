@@ -18,8 +18,14 @@ void ServerThreads::initializationOfDataStructures()
     {
 
         // On initialise a quelle valeur pour Available???
-
-
+        for (int i = 0; i < numResources; i++)
+        {
+            Available[i] = rand() % (2 * numClients);
+            for (int j = 0; j < numClients; j++)
+            {
+                Max[j][i] = rand() % Available[i];
+            }
+        }
     }
 
     /// TP2_END_TO_DO

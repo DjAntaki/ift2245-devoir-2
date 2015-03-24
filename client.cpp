@@ -41,7 +41,7 @@ void* Client::run(void * param)
         cout << endl;
 
         // on remplit la requête à partir de demandes et de libération aléatoires
-        int acquisition = rand() % 2; /* 4 pour des requêtes invalides */
+        int acquisition = rand() % 4; /* 4 pour des requêtes invalides */
 
         cout << "client " << client->id << ": requête de type " << acquisition << endl;
 
@@ -69,7 +69,7 @@ void* Client::run(void * param)
             else // requête invalide de libération
             {
                 cout << "libération invalide" << endl;
-                request[i + 1] = (client->acquired[i] + 1) % Client::Max[client->id][i];
+                request[i + 1] = - (client->acquired[i] + 1);
             }
         }
 
@@ -81,7 +81,7 @@ void* Client::run(void * param)
 
         cout << endl;
 
-        int response = 0;
+        int response[1] = {-1};
 
         // boucle pour écrire le message
         do
@@ -90,7 +90,7 @@ void* Client::run(void * param)
 
             cout << "client " << client->id << " acquired the open semaphore" << endl;
 
-            int sock = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
+            int sock = socket(AF_INET, SOCK_STREAM, 0);
 
             if (sock < 0)
                 error("couldn't open socket");
@@ -107,11 +107,11 @@ void* Client::run(void * param)
                 error("couldn't write request to server");
 
             cout << "waiting on server..." << endl;
-
+            
             // lit la réponse du serveur
-            written = read(sock, &response, sizeof (int));
+            written = read(sock, response, sizeof (int));
 
-            cout << "read " << response << " from server" << endl;
+            cout << "read " << response[0] << " from server" << endl;
 
             if (written < sizeof (int))
                 error("couldn't read response from server");
@@ -119,7 +119,7 @@ void* Client::run(void * param)
             // vérouille les variables pour les résultats
             pthread_mutex_lock(&Client::results_lock);
 
-            switch (response)
+            switch (response[0])
             {
             case ACCEPTED:
                 // application de la transaction sur les données acquises
@@ -145,11 +145,10 @@ void* Client::run(void * param)
             sem_post(&Client::open_limit);
 
             // attente jusqu'à réponse du serveur
-            if (response > 0)
-                usleep(response * 1000);
-
+            if (response[0] > 0)
+                usleep(response[0] * 1000);
         }
-        while (response > 0);
+        while (response[0] > 0);
     }
 
     cout << "client " << client->id << ": finished processing" << endl;

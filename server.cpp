@@ -26,7 +26,6 @@ void ServerThreads::initializationOfDataStructures()
             }
         }
     }
-
     /// TP2_END_TO_DO
 
     ///DO NOT ERASE THIS PART
@@ -48,12 +47,12 @@ void ServerThreads::processRequest(int threadID, int sockfd)
     int request[1 + numResources];
     bzero(&request, sizeof (int) * (1 + numResources));
 
-    pthread_mutex_lock(&accept_lock);
+    //pthread_mutex_lock(&accept_lock);
     // lecture de la requête du client
     //
     int n = read(sockfd, request, (1 + numResources) * sizeof (int));
 
-    pthread_mutex_unlock(&accept_lock);
+    //pthread_mutex_unlock(&accept_lock);
 
     if (n < 0)
         error("ERROR reading from socket");
@@ -73,16 +72,21 @@ void ServerThreads::processRequest(int threadID, int sockfd)
     // C'est une requete qui demande des ressources
     // Algorithme du Banquier!
     //
-    int answer = 0; ///On suppose la requête valide
+    int answer[1] = {0}; ///On suppose la requête valide
 
     pthread_mutex_lock(&ServerThreads::available_lock);
-    for (int i = 0; i < numResources; i++) {
-        if (request[i + 1] <= Max[clientID][i] && request[i+1] < -Allocation[clientID][i]) {
+    for (int i = 0; i < numResources; i++)
+    {
+        cout << "Allocation " << i <<" : " << Allocation[clientID][i] << endl;
+        if ((request[i + 1] <= Max[clientID][i]) && (-request[i + 1] <= Allocation[clientID][i]))
+        {
 
             if (request[i + 1] > Available[i])
             {
+                cout << "on wait" << endl;
+
                 //Not enough ressources, waiting time as answer. 1000 pour l'instant.
-                answer = 1000;
+                answer[0] = 1000;
                 countOnWait++;
                 break;
             }
@@ -91,13 +95,16 @@ void ServerThreads::processRequest(int threadID, int sockfd)
         else
         {
             //Invalid request
-            answer = -1;
+            cout << "invalid" << endl;
+            answer[0] = -1;
             countInvalid++;
             break;
         }
     }
-    if (answer == 0)
+    if (answer[0] == 0)
     {
+        cout << "accepted" << endl;
+
         for (int i = 0; i < numResources; i++)
         {
             Available[i] -= request[i + 1];
@@ -106,7 +113,7 @@ void ServerThreads::processRequest(int threadID, int sockfd)
         countAccepted++;
 
     }
-    else if (answer > 0)
+    else if (answer[0] > 0)
     {
 
         for (int i = 0; i < numResources; i++)
@@ -116,21 +123,20 @@ void ServerThreads::processRequest(int threadID, int sockfd)
 
     }
 
-    // écrit un entier pour répondre au client
-    if (write(sockfd, &answer, sizeof (int)) < 0)
-        error("could not respond to client");
-
-    cout << "server " << threadID << ": written " << answer << " to client " << clientID << endl;
-
-    // le client devrait avoir terminé à ce point et commencé à traiter une
-    // nouvelle requête
-
     // considère que la requête est processé
-    if (answer == 0)
+    if (answer[0] <= 0)
         requestProcesed++;
 
     pthread_mutex_unlock(&available_lock);
 
+    cout << "server " << threadID << ": written " << answer[0] << " to client " << clientID << endl;
+
+    // écrit un entier pour répondre au client
+    if (write(sockfd, &answer, sizeof (int)) < 0)
+        error("could not respond to client");
+
+    // le client devrait avoir terminé à ce point et commencé à traiter une
+    // nouvelle requête
 }
 
 /// Do not modify this function
@@ -186,7 +192,7 @@ void* ServerThreads::threadCode(void * param)
 void ServerThreads::createAndStart()
 {
     // création du socket
-    sock = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
+    sock = socket(AF_INET, SOCK_STREAM, 0);
 
     if (sock < 0)
         error("ERROR opening socket");
@@ -274,6 +280,7 @@ void ServerThreads::readConfigurationFile(const char *fileName)
     {
         Max[i] = new int[numResources];
         Allocation[i] = new int[numResources];
+        bzero(Allocation[i], sizeof (int) * numResources);
         Need[i] = new int[numResources];
     }
 

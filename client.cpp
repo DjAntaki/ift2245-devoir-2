@@ -1,7 +1,5 @@
 #include "client.h"
 
-#include "common.h"
-
 /**
  * Code du thread client.
  *
@@ -85,8 +83,12 @@ void* Client::run(void * param)
             if (written < sizeof (int))
                 error("couldn't write request to server");
 
+            cout << "waiting on server..." << endl;
+
             // lit la réponse du serveur
             written = read(sock, &response, sizeof (int));
+
+            cout << "read " << response << " from server" << endl;
 
             if (written < sizeof (int))
                 error("couldn't read response from server");
@@ -202,8 +204,6 @@ void Client::readMaxFromFile()
 Client::Client()
 {
     this->id = count++;
-    pthread_mutex_init(&Client::results_lock, NULL);
-    sem_init(&Client::open_limit, 0, 10);
     bzero(&this->acquired, sizeof (int) * numResources);
 }
 
@@ -240,6 +240,10 @@ int main(void)
 {
     //Read the parameters from the configuration file specified
     int n = Client::readConfigurationFile("initValues.cfg");
+
+    // initialisation des mutex/sémaphore
+    pthread_mutex_init(&Client::results_lock, NULL);
+    sem_init(&Client::open_limit, 0, 512);
 
     // nombre de threads instanciés
     Client client[n];

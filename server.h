@@ -3,7 +3,6 @@
 
 #include "common.h"
 
-
 //POSIX library for threads
 #include <pthread.h>
 #include <unistd.h>

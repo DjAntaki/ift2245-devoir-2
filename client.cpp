@@ -15,15 +15,7 @@ void* Client::run(void * param)
 {
     Client* client = (Client*) param;
 
-    sem_wait(&Client::open_limit);
-
-    cout << "client " << client->id << " acquired the open semaphore" << endl;
-
-    int sock = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
     sockaddr_in addr;
-
-    if (sock < 0)
-        error("couldn't open socket");
 
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = INADDR_ANY;
@@ -49,20 +41,35 @@ void* Client::run(void * param)
         cout << endl;
 
         // on remplit la requête à partir de demandes et de libération aléatoires
-        bool acquisition = rand() % 2;
+        int acquisition = rand() % 2; /* 4 pour des requêtes invalides */
+
+        cout << "client " << client->id << ": requête de type " << acquisition << endl;
 
         for (int i = 0; i < Client::numResources; i++)
         {
-            cout << "resource " << i << " " << Client::Max[client->id][i] << " " << client->acquired[i] << endl;
-            if (acquisition)
+            cout << "client " << client->id << ": resource " << i << " (" << client->acquired[i] << "/" << Client::Max[client->id][i] << ")" << endl;
+
+            if (acquisition == 0)
             {
+                cout << "allocation valide" << endl;
                 // allocation de ressources
-                request[i + 1] = -(rand() % (Client::Max[client->id][i] - client->acquired[i]));
+                request[i + 1] = (rand() % (Client::Max[client->id][i] - client->acquired[i]));
             }
-            else
+            else if (acquisition == 1)
             {
+                cout << "libération valide" << endl;
                 // libération de ressources
-                request[i + 1] = client->acquired[i] > 0 ? (rand() % client->acquired[i]) : 0; // ...?
+                request[i + 1] = (client->acquired[i] > 0) ? -(rand() % client->acquired[i]) : 0; // ...?
+            }
+            else if (acquisition == 2) // requête invalide d'allocation
+            {
+                cout << "allocation invalide" << endl;
+                request[i + 1] = (Client::Max[client->id][i] - client->acquired[i]) + (rand() % (Client::Max[client->id][i] - client->acquired[i]));
+            }
+            else // requête invalide de libération
+            {
+                cout << "libération invalide" << endl;
+                request[i + 1] = (client->acquired[i] + 1) % Client::Max[client->id][i];
             }
         }
 
@@ -79,6 +86,15 @@ void* Client::run(void * param)
         // boucle pour écrire le message
         do
         {
+            sem_wait(&Client::open_limit);
+
+            cout << "client " << client->id << " acquired the open semaphore" << endl;
+
+            int sock = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
+
+            if (sock < 0)
+                error("couldn't open socket");
+
             // connect on the socket
             while (connect(sock, (sockaddr*) & addr, sizeof (addr)) < 0)
                 usleep(300); // attendre 300 µs avant la prochaine connexion
@@ -107,9 +123,9 @@ void* Client::run(void * param)
             {
             case ACCEPTED:
                 // application de la transaction sur les données acquises
-                for (int i = 1; i < 1 + Client::numResources; i++)
+                for (int i = 0; i < Client::numResources; i++)
                 {
-                    client->acquired[i] += request[i];
+                    client->acquired[i] += request[i + 1];
                 }
                 countAccepted++;
                 break;
@@ -123,17 +139,18 @@ void* Client::run(void * param)
 
             pthread_mutex_unlock(&Client::results_lock);
 
+            // ferme le socket pour libérer une ressource
+            close(sock);
+
+            sem_post(&Client::open_limit);
+
             // attente jusqu'à réponse du serveur
             if (response > 0)
                 usleep(response * 1000);
+
         }
         while (response > 0);
     }
-
-    // ferme le socket pour libérer une ressource
-    close(sock);
-
-    sem_post(&Client::open_limit);
 
     cout << "client " << client->id << ": finished processing" << endl;
 
@@ -219,6 +236,7 @@ Client::Client()
 
 Client::~Client()
 {
+    /*
     if (Max != NULL)
     {
         for (int i = 0; i < numResources; i++)
@@ -226,6 +244,7 @@ Client::~Client()
         delete []Max;
         Max = NULL;
     }
+     */
 }
 
 int Client::count = 0;

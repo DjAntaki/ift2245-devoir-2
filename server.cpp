@@ -16,7 +16,7 @@ void ServerThreads::initializationOfDataStructures()
 
     if (!initDataProvided)
     {
-
+        // génération des données
         for (int i = 0; i < numResources; i++)
         {
             Available[i] = rand() % (2 * numClients);
@@ -363,20 +363,22 @@ ServerThreads::~ServerThreads()
     if (pt_attr != NULL)
         delete []pt_attr;
 
-    if (Available != NULL)
-        delete []Available;
-    if (Max != NULL)
+    /*
+if (Available != NULL)
+    delete []Available;
+if (Max != NULL)
+{
+    for (int i = 0; i < numResources; i++)
     {
-        for (int i = 0; i < numResources; i++)
-        {
-            delete []Max[i];
-            delete []Allocation[i];
-            delete []Need[i];
-        }
-        delete []Max;
-        delete []Allocation;
-        delete []Need;
+        delete []Max[i];
+        delete []Allocation[i];
+        delete []Need[i];
     }
+    delete []Max;
+    delete []Allocation;
+    delete []Need;
+}
+     */
 
     if (sock == -1)
         close(sock);

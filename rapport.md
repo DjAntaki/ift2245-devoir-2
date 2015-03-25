@@ -57,8 +57,25 @@ Pour garantir que le système ne finira jamais en _deadlock_, nous avons pris
 soin de :
 
  - ne pas créer de cycle de verrou au sein du programme
+ - la génération aléatoire lorsqu'aucunes données initiales ne sont fournies est
+   telle que `Max[i] <= Available[i] pour tout i dans [0,numClients]` s'assurant
+   que le programme démarre dans un état _safe_
  - appliquer l'algorithme du Banquier et ne jamais transiter vers un état
    _unsafe_
+
+Puisque qu’on ne sait pas les requêtes à venir, notre algorithme du banquier 
+utilise un heuristique qui suppose que la prochaine requête recu pour un client 
+i est Max[i] - Allocation[i] et que si cette requête est satisfiable, le client 
+relâchera tous ces ressources après. Cette heuristique est bonne car elle 
+suppose une requête maximale (il est impossible d’avoir une requête plus grande 
+que celle-ci) et suppose un relâchement de toutes les ressources, ce que le
+client fait éventuellement lorsqu’il termine. En fait, cette heuristique est 
+plus contraignante que la réalité, car il est possible qu’un client ne demande 
+jamais le maximum de ses ressources.
+
+De ce fait, l’algorithme du banquier accepte une requête quand elle répond aux 
+critères précédents puisque ceux-ci sont suffisants pour que, sur les même 
+critères d’acceptation de requête, l’algorithme termine.
 
 ## Question 2
 

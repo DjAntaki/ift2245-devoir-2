@@ -44,13 +44,13 @@ void ServerThreads::initializationOfDataStructures()
 void ServerThreads::processRequest(int threadID, int sockfd)
 {
     // contient la requête du client
-    int request[1 + numResources];
+    int request[1 + numResources + 1];
     bzero(&request, sizeof (int) * (1 + numResources));
 
     //pthread_mutex_lock(&accept_lock);
     // lecture de la requête du client
     //
-    int n = read(sockfd, request, (1 + numResources) * sizeof (int));
+    int n = read(sockfd, request, (1 + numResources + 1) * sizeof (int));
 
     //pthread_mutex_unlock(&accept_lock);
 
@@ -59,12 +59,14 @@ void ServerThreads::processRequest(int threadID, int sockfd)
 
     int clientID = request[0];
 
-    printf("thread %u handling request from client %u", threadID, clientID);
+    printf("server %u handling request from client %u", threadID, clientID);
+
+    cout << "server " << threadID << ": client: " << clientID << ": ";
 
     for (int i = 1; i < 1 + numResources; i++)
         cout << " " << request[i];
 
-    cout << endl;
+    cout << " last request? " << request[numResources + 1] << endl;
 
     // TODO: mutex sur l'algorithme du Banquier
 
@@ -77,7 +79,7 @@ void ServerThreads::processRequest(int threadID, int sockfd)
     pthread_mutex_lock(&ServerThreads::available_lock);
     for (int i = 0; i < numResources; i++)
     {
-        cout << "Allocation " << i <<" : " << Allocation[clientID][i] << endl;
+        cout << "Allocation " << i << " : " << Allocation[clientID][i] << endl;
         if ((request[i + 1] <= Max[clientID][i]) && (-request[i + 1] <= Allocation[clientID][i]))
         {
 
@@ -131,7 +133,7 @@ void ServerThreads::processRequest(int threadID, int sockfd)
 
     cout << "server " << threadID << ": written " << answer[0] << " to client " << clientID << endl;
     cout << "Total processed request " << requestProcessed << "/" << totalNumRequests << endl;
-    
+
     // écrit un entier pour répondre au client
     if (write(sockfd, &answer, sizeof (int)) < 0)
         error("could not respond to client");

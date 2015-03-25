@@ -27,8 +27,9 @@ void* Client::run(void * param)
         /*
          * 1 int            client id
          * numResources int les resources
+         * 1 int            indique si la requête est la dernière
          */
-        int request[1 + Client::numResources];
+        int request[1 + Client::numResources + 1];
 
         // le premier entier correspond au ID du client
         request[0] = client->id;
@@ -41,7 +42,7 @@ void* Client::run(void * param)
         cout << endl;
 
         // on remplit la requête à partir de demandes et de libération aléatoires
-        int acquisition = rand() % 4; /* 4 pour des requêtes invalides */
+        int acquisition = rand() % 2; /* 4 pour des requêtes invalides */
 
         cout << "client " << client->id << ": requête de type " << acquisition << endl;
 
@@ -54,9 +55,9 @@ void* Client::run(void * param)
                 cout << "client" << client->id << ": request" << i << ": allocation valide" << endl;
                 // allocation de ressources
                 request[i + 1] =
-                    (Client::Max[client->id][i] == client->acquired[i]) ?
-                    0 : // modulo 0 indéfini
-                    (rand() % (Client::Max[client->id][i] - client->acquired[i]));
+                        (Client::Max[client->id][i] == client->acquired[i]) ?
+                        0 : // modulo 0 indéfini
+                        (rand() % (Client::Max[client->id][i] - client->acquired[i]));
             }
             else if (acquisition == 1)
             {
@@ -68,17 +69,20 @@ void* Client::run(void * param)
             {
                 cout << "client" << client->id << ": request" << i << ": allocation invalide" << endl;
                 request[i + 1] = (Client::Max[client->id][i] - client->acquired[i]) +
-                    (
-                     (Client::Max[client->id][i] == client->acquired[i]) ? 0 :
-                     rand() % (Client::Max[client->id][i] - client->acquired[i])
-                    );
+                        (
+                        (Client::Max[client->id][i] == client->acquired[i]) ? 0 :
+                        rand() % (Client::Max[client->id][i] - client->acquired[i])
+                        );
             }
             else // requête invalide de libération
             {
                 cout << "client" << client->id << ": request" << i << ": libération invalide" << endl;
-                request[i + 1] = - (client->acquired[i] + 1);
+                request[i + 1] = -(client->acquired[i] + 1);
             }
         }
+
+        // dernière requête?
+        request[Client::numResources + 1] = request_id == (Client::numRequests - 1);
 
         cout << "client " << client->id << " request: " << request_id << " ";
 
@@ -86,7 +90,7 @@ void* Client::run(void * param)
         for (int i = 1; i < 1 + Client::numResources; i++)
             cout << " " << request[i];
 
-        cout << endl;
+        cout << " last? " << request[Client::numResources + 1] << endl;
 
         int response[1] = {-1};
 
@@ -106,7 +110,7 @@ void* Client::run(void * param)
 
             cout << "client " << client->id << ": " << request_id << ": connexion établie avec le serveur" << endl;
 
-            ssize_t written = write(sock, &request, (1 + Client::numResources) * sizeof (int));
+            ssize_t written = write(sock, &request, (1 + Client::numResources + 1) * sizeof (int));
 
             if (written < sizeof (int))
                 error("couldn't write request to server");

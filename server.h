@@ -15,6 +15,7 @@ public:
     ServerThreads();
     ~ServerThreads();
 
+    bool ServerThreads::BankerSimulation(int *request);
     void readConfigurationFile(const char *fileName);
     void createAndStart();
     void initializationOfDataStructures();
@@ -41,6 +42,7 @@ private:
     static int timeout; // Maximum number of seconds that the server program will run
     static int requestProcesed; // Number of request already processed
     static int totalNumRequests; // Total number of request to be processed (numClients*numRequestPerClient)
+ 
     
     //Banker's Algorithm data structures (see the book for further details)
     static int *Available;

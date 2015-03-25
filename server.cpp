@@ -4,7 +4,8 @@
 ///In this function initialize the Banker's Algorithm
 ///data structures as you see convinient
 
-void ServerThreads::initializationOfDataStructures() {
+void ServerThreads::initializationOfDataStructures()
+{
     /// TP2_TO_DO
 
     // If 'initialValuesProvided' is true in the configuraton file
@@ -20,7 +21,8 @@ void ServerThreads::initializationOfDataStructures() {
         for (int i = 0; i < numResources; i++)
         {
             Available[i] = rand() % (2 * numClients);
-            for (int j = 0; j < numClients; j++) {
+            for (int j = 0; j < numClients; j++)
+            {
                 Max[j][i] = rand() % Available[i];
             }
         }
@@ -40,7 +42,8 @@ void ServerThreads::initializationOfDataStructures() {
  * @param socketFD descipteur de fichier pour communiquer avec le client
  * @return la réponse retournée au client
  */
-void ServerThreads::processRequest(int threadID, int sockfd) {
+void ServerThreads::processRequest(int threadID, int sockfd)
+{
     // contient la requête du client
     int request[1 + numResources + 1];
     bzero(&request, sizeof (int) * (1 + numResources));
@@ -66,7 +69,7 @@ void ServerThreads::processRequest(int threadID, int sockfd) {
 
     cout << " last request? " << request[numResources + 1] << endl;
     bool lastrequest = request[numResources + 1];
-    
+
     //Traitement de la requete
     // C'est une requete qui demande des ressources
     // Algorithme du Banquier!
@@ -89,7 +92,9 @@ void ServerThreads::processRequest(int threadID, int sockfd) {
                 break;
             }
 
-        } else {
+        }
+        else
+        {
             //Invalid request
             cout << "invalid" << endl;
             answer[0] = -1;
@@ -113,7 +118,8 @@ void ServerThreads::processRequest(int threadID, int sockfd) {
     }
     else if (answer[0] > 0)
     {
-        for (int i = 0; i < numResources; i++) {
+        for (int i = 0; i < numResources; i++)
+        {
             Need[clientID][i] = request[i + 1];
         }
 
@@ -122,11 +128,11 @@ void ServerThreads::processRequest(int threadID, int sockfd) {
     // considère que la requête est processé
     if (answer[0] <= 0)
         requestProcessed++;
-    
-    if (lastrequest){
-        ClientsRunning = false;
+
+    if (lastrequest)
+    {
+        ClientsRunning[clientID] = false;
     }
-        
 
     pthread_mutex_unlock(&available_lock);
 
@@ -145,44 +151,61 @@ void ServerThreads::processRequest(int threadID, int sockfd) {
 //Disclaimer : J'ai lu la page wikipedia de l'algorithme du banquier pour le comprendre.
 //Une fois compris, je ne lai pas relu pour coder l'algo. Toute ressemble avec la page wikipedia est a blamer sur ma mémoire.
 
-bool ServerThreads::BankersSimulation(int *request) {
+bool ServerThreads::BankersSimulation(int *request)
+{
 
-    bool running [] ; //doit etre une copie de letat des clients au demaragge de la simulation
+    bool running[numClients]; //doit etre une copie de letat des clients au demaragge de la simulation
+
+    for (int i = 0; i < numClients; i++)
+        running[i] = ClientsRunning[i];
+
     int c = 0;
-    int avl[][]; //faire une copie de Available
-    
-    int clientID = request[0];
-    for(int x = 1; x <numResources +1 ; x++) {
-        avl[clientID][x] -= request[x];
-    }
-    
-    while (c != 0) {
-        bool safe = 0;
-        for (int i; i < numClients; i++) {
+    int avl[numResources]; //faire une copie de Available
 
-            if (running[i]) {
+    for (int i = 0; i < numResources; i++)
+        avl[i] = Available[i];
+
+    int clientID = request[0];
+    for (int x = 1; x < numResources + 1; x++)
+    {
+        avl[x] -= request[x];
+    }
+
+    while (c != 0)
+    {
+        bool safe = 0;
+        for (int i; i < numClients; i++)
+        {
+
+            if (running[i])
+            {
                 bool release = true;
 
-                for (int y; y < numResources; y++) {
-                    if (Max[i][y] - Allocation[i][y] > avl[i][y]) {
+                for (int y; y < numResources; y++)
+                {
+                    if (Max[i][y] - Allocation[i][y] > avl[y])
+                    {
                         release = false;
                     }
                 }
 
-                if (release) {
+                if (release)
+                {
                     safe = 1;
                     c--;
-                    running = false;
-                    for (int y; y < numResources; y++) {
-                        avl[i][y] += Allocation[i][y];
+                    running[i] = false;
+                    for (int y; y < numResources; y++)
+                    {
+                        avl[y] += Allocation[i][y];
                     }
-                    
+
                 }
 
             }
 
         }
-        if (safe==0){
+        if (safe == 0)
+        {
             return false;
         }
     }
@@ -196,7 +219,8 @@ bool ServerThreads::BankersSimulation(int *request) {
 /**
  * Code du thread du serveur.
  */
-void* ServerThreads::threadCode(void * param) {
+void* ServerThreads::threadCode(void * param)
+{
     int ID = *((int*) param);
 
     struct sockaddr_in thread_addr;
@@ -204,14 +228,17 @@ void* ServerThreads::threadCode(void * param) {
     int start = time(NULL);
 
     // Now loop until the server has completely dispatched all clients
-    do {
+    do
+    {
         // Loop until accept() returns the first valid conection
         pthread_mutex_lock(&ServerThreads::accept_lock);
 
         // accept a new connection
         int thread_fd;
-        while ((thread_fd = accept(sock, (struct sockaddr *) &thread_addr, &threadSL)) < 0) {
-            if ((time(NULL) - start) >= timeout) {
+        while ((thread_fd = accept(sock, (struct sockaddr *) &thread_addr, &threadSL)) < 0)
+        {
+            if ((time(NULL) - start) >= timeout)
+            {
                 cerr << "Time out on thread " << ID << endl;
                 pthread_mutex_unlock(&ServerThreads::accept_lock);
                 pthread_exit(NULL);
@@ -237,7 +264,8 @@ void* ServerThreads::threadCode(void * param) {
 /// Do not modify this function
 /// Rather use it as an example to uderstand socket functionality
 
-void ServerThreads::createAndStart() {
+void ServerThreads::createAndStart()
+{
     // création du socket
     sock = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -261,7 +289,8 @@ void ServerThreads::createAndStart() {
     cout << "Now waiting for clients..." << endl;
 
     //Finally create each child thread and run the function threadCode
-    for (int i = 0; i < numServerThreads; i++) {
+    for (int i = 0; i < numServerThreads; i++)
+    {
         realID[i] = i; //Assign the real ID (from 0 to numServerThreads-1)
         pthread_create(&pt_tid[i], NULL, &threadCode, &realID[i]);
     }
@@ -275,7 +304,8 @@ void ServerThreads::createAndStart() {
 /// the end of the client application excecution. But do not
 /// modify the results file output, as it is neccesary for evaluation
 
-void ServerThreads::printAndSaveResults(const char* fileName) {
+void ServerThreads::printAndSaveResults(const char* fileName)
+{
     cout << endl << "------Server Results-------" << endl;
     cout << "Requests accepted:\t\t" << countAccepted << endl;
     cout << "Requests sent to wait:\t\t" << countOnWait << endl;
@@ -294,8 +324,10 @@ void ServerThreads::printAndSaveResults(const char* fileName) {
 /// You can modify this function if you want to add other fields
 /// to the configuration field, but normally you will not need to
 
-void ServerThreads::readConfigurationFile(const char *fileName) {
-    if (!fileExists(fileName)) {
+void ServerThreads::readConfigurationFile(const char *fileName)
+{
+    if (!fileExists(fileName))
+    {
         cout << "No configuration file " << fileName << " found" << endl;
         exit(1);
     }
@@ -320,8 +352,9 @@ void ServerThreads::readConfigurationFile(const char *fileName) {
     Allocation = new int*[numClients];
     Need = new int*[numClients];
     ClientsRunning = new bool[numClients];
-    bzero(ClientRunning, sizeof (bool)*numClients);
-    for (int i = 0; i < numClients; i++) {
+    bzero(ClientsRunning, sizeof (bool) * numClients);
+    for (int i = 0; i < numClients; i++)
+    {
         Max[i] = new int[numResources];
         Allocation[i] = new int[numResources];
         bzero(Allocation[i], sizeof (int) * numResources);
@@ -330,7 +363,8 @@ void ServerThreads::readConfigurationFile(const char *fileName) {
 
     cfg.lookupValue("initialValuesProvided", initDataProvided);
 
-    if (initDataProvided) {
+    if (initDataProvided)
+    {
         //Initialize the Available and Max structures
         libconfig::Setting& available = cfg.lookup("availableResources");
         libconfig::Setting& maximum = cfg.lookup("maximumPerClient");
@@ -338,11 +372,14 @@ void ServerThreads::readConfigurationFile(const char *fileName) {
         for (int i = 0; i < numResources; i++)
             Available[i] = available[i];
 
-        for (int i = 0; i < numClients; i++) {
-            for (int j = 0; j < numResources; j++) {
+        for (int i = 0; i < numClients; i++)
+        {
+            for (int j = 0; j < numResources; j++)
+            {
                 Max[i][j] = maximum[i][j];
                 //Verification
-                if (Max[i][j] > Available[j]) {
+                if (Max[i][j] > Available[j])
+                {
                     cerr << "Invalid maximumPerClient values" << endl;
                     exit(1);
                 }
@@ -356,12 +393,14 @@ void ServerThreads::readConfigurationFile(const char *fileName) {
     cout << "Server backlog size: " << backlog << endl;
     cout << "Number of clients: " << numClients << endl;
     cout << "Number of resources: " << numResources << endl;
-    if (initDataProvided) {
+    if (initDataProvided)
+    {
         cout << "Available resources at start:" << endl;
         for (int i = 0; i < numResources; i++)
             cout << Available[i] << " ";
         cout << endl << endl;
-    } else
+    }
+    else
         cout << endl << "No initial values provided, needs aditional initialization" << endl;
 }
 
@@ -369,13 +408,15 @@ void ServerThreads::readConfigurationFile(const char *fileName) {
 /// The rest of the code is neccesary for the correct functionality
 /// You can add extra stuff, but try to keep the provided code as it is
 
-void ServerThreads::writeMaxToFile() {
+void ServerThreads::writeMaxToFile()
+{
 
     if (!fileExists("temp")) mkdir("temp", 0755);
     if (fileExists("temp/Max")) remove("temp/Max");
     ofstream fs("temp/Max");
 
-    for (int i = 0; i < numClients; i++) {
+    for (int i = 0; i < numClients; i++)
+    {
         for (int j = 0; j < numResources; j++)
             fs << Max[i][j] << " ";
         fs << endl;
@@ -383,14 +424,16 @@ void ServerThreads::writeMaxToFile() {
     fs.close();
 }
 
-ServerThreads::ServerThreads() {
+ServerThreads::ServerThreads()
+{
     // General initialization
     realID = NULL;
     pt_tid = NULL;
     pt_attr = NULL;
 }
 
-ServerThreads::~ServerThreads() {
+ServerThreads::~ServerThreads()
+{
     if (realID != NULL)
         delete []realID;
     if (pt_tid != NULL)
@@ -429,8 +472,8 @@ int ServerThreads::requestProcessed = 0;
 int ServerThreads::totalNumRequests = 0;
 int ServerThreads::timeout = 0;
 int ServerThreads::sock = -1;
-bool ServerThreads::ClientsRunning[] = NULL
-        
+bool* ServerThreads::ClientsRunning = NULL;
+
 // Initialization of result variables
 int ServerThreads::countAccepted = 0;
 int ServerThreads::countOnWait = 0;
@@ -445,7 +488,8 @@ int** ServerThreads::Need = NULL;
 pthread_mutex_t ServerThreads::accept_lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t ServerThreads::available_lock = PTHREAD_MUTEX_INITIALIZER;
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
     ServerThreads server;
 
     //Read the parameters from the configuration file specified

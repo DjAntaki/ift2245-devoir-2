@@ -15,15 +15,7 @@ void* Client::run(void * param)
 {
     Client* client = (Client*) param;
 
-    sem_wait(&Client::open_limit);
-
-    cout << "client " << client->id << " acquired the open semaphore" << endl;
-
-    int sock = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
     sockaddr_in addr;
-
-    if (sock < 0)
-        error("couldn't open socket");
 
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = INADDR_ANY;
@@ -35,8 +27,9 @@ void* Client::run(void * param)
         /*
          * 1 int            client id
          * numResources int les resources
+         * 1 int            indique si la requête est la dernière
          */
-        int request[1 + Client::numResources];
+        int request[1 + Client::numResources + 1];
 
         // le premier entier correspond au ID du client
         request[0] = client->id;
@@ -49,22 +42,47 @@ void* Client::run(void * param)
         cout << endl;
 
         // on remplit la requête à partir de demandes et de libération aléatoires
-        bool acquisition = rand() % 2;
+        int acquisition = rand() % 2; /* 4 pour des requêtes invalides */
+
+        cout << "client " << client->id << ": requête de type " << acquisition << endl;
 
         for (int i = 0; i < Client::numResources; i++)
         {
-            cout << "resource " << i << " " << Client::Max[client->id][i] << " " << client->acquired[i] << endl;
-            if (acquisition)
+            cout << "client " << client->id << ": resource " << i << " (" << client->acquired[i] << "/" << Client::Max[client->id][i] << ")" << endl;
+
+            if (acquisition == 0)
             {
+                cout << "client" << client->id << ": request" << i << ": allocation valide" << endl;
                 // allocation de ressources
-                request[i + 1] = -(rand() % (Client::Max[client->id][i] - client->acquired[i]));
+                request[i + 1] =
+                        (Client::Max[client->id][i] == client->acquired[i]) ?
+                        0 : // modulo 0 indéfini
+                        (rand() % (Client::Max[client->id][i] - client->acquired[i]));
             }
-            else
+            else if (acquisition == 1)
             {
+                cout << "client" << client->id << ": request" << i << ": libération valide" << endl;
                 // libération de ressources
-                request[i + 1] = client->acquired[i] > 0 ? (rand() % client->acquired[i]) : 0; // ...?
+                request[i + 1] = (client->acquired[i] > 0) ? -(rand() % client->acquired[i]) : 0; // ...?
+            }
+            else if (acquisition == 2) // requête invalide d'allocation
+            {
+                cout << "client" << client->id << ": request" << i << ": allocation invalide" << endl;
+                request[i + 1] = (Client::Max[client->id][i] - client->acquired[i]) +
+                        (
+                        (Client::Max[client->id][i] == client->acquired[i]) ? 0 :
+                        rand() % (Client::Max[client->id][i] - client->acquired[i])
+                        );
+            }
+            else // requête invalide de libération
+            {
+                cout << "client" << client->id << ": request" << i << ": libération invalide" << endl;
+                request[i + 1] = -(client->acquired[i] + 1);
             }
         }
+
+        // dernière requête?
+        request[Client::numResources + 1] = request_id == (Client::numRequests - 1);
 
         cout << "client " << client->id << " request: " << request_id << " ";
 
@@ -72,49 +90,53 @@ void* Client::run(void * param)
         for (int i = 1; i < 1 + Client::numResources; i++)
             cout << " " << request[i];
 
-        cout << endl;
+        cout << " last? " << request[Client::numResources + 1] << endl;
 
-        int response = 0;
+        int response[1] = {-1};
 
         // boucle pour écrire le message
         do
         {
+            sem_wait(&Client::open_limit);
+
+            int sock = socket(AF_INET, SOCK_STREAM, 0);
+
+            if (sock < 0)
+                error("couldn't open socket");
+
             // connect on the socket
             while (connect(sock, (sockaddr*) & addr, sizeof (addr)) < 0)
                 usleep(300); // attendre 300 µs avant la prochaine connexion
 
             cout << "client " << client->id << ": " << request_id << ": connexion établie avec le serveur" << endl;
 
-            ssize_t written = write(sock, &request, (1 + Client::numResources) * sizeof (int));
+            ssize_t written = write(sock, &request, (1 + Client::numResources + 1) * sizeof (int));
 
             if (written < sizeof (int))
                 error("couldn't write request to server");
 
-            cout << "waiting on server..." << endl;
-
             // lit la réponse du serveur
-            written = read(sock, &response, sizeof (int));
-
-            cout << "read " << response << " from server" << endl;
+            written = read(sock, response, sizeof (int));
 
             if (written < sizeof (int))
                 error("couldn't read response from server");
 
+            cout << "client " << client->id << ": read " << response[0] << " from server" << endl;
+
             // vérouille les variables pour les résultats
             pthread_mutex_lock(&Client::results_lock);
 
-            switch (response)
+            switch (response[0])
             {
             case ACCEPTED:
                 // application de la transaction sur les données acquises
-                for (int i = 1; i < 1 + Client::numResources; i++)
+                for (int i = 0; i < Client::numResources; i++)
                 {
-                    client->acquired[i] += request[i];
+                    client->acquired[i] += request[i + 1];
                 }
                 countAccepted++;
                 break;
             case INVALID:
-                cout << "client " << client->id << ": request " << request_id << ": INVALID";
                 countInvalid++;
                 break;
             default:
@@ -123,17 +145,17 @@ void* Client::run(void * param)
 
             pthread_mutex_unlock(&Client::results_lock);
 
+            // ferme le socket pour libérer une ressource
+            close(sock);
+
+            sem_post(&Client::open_limit);
+
             // attente jusqu'à réponse du serveur
-            if (response > 0)
-                usleep(response * 1000);
+            if (response[0] > 0)
+                usleep(response[0] * 1000);
         }
-        while (response > 0);
+        while (response[0] > 0);
     }
-
-    // ferme le socket pour libérer une ressource
-    close(sock);
-
-    sem_post(&Client::open_limit);
 
     cout << "client " << client->id << ": finished processing" << endl;
 
@@ -214,11 +236,12 @@ Client::Client()
 {
     this->id = count++;
     this->acquired = new int[numResources];
-    bzero(&this->acquired, sizeof (int) * numResources);
+    bzero(this->acquired, sizeof (int) * numResources);
 }
 
 Client::~Client()
 {
+    /*
     if (Max != NULL)
     {
         for (int i = 0; i < numResources; i++)
@@ -226,6 +249,7 @@ Client::~Client()
         delete []Max;
         Max = NULL;
     }
+     */
 }
 
 int Client::count = 0;
@@ -252,7 +276,7 @@ int main(void)
     int n = Client::readConfigurationFile("initValues.cfg");
 
     // initialisation de la mutex
-    sem_init(&Client::open_limit, 0, 512);
+    sem_init(&Client::open_limit, 0, 4);
 
     // nombre de threads instanciés
     Client client[n];
@@ -265,7 +289,7 @@ int main(void)
     // on attend que tous les threads clients terminent
     for (int i = 0; i < n; i++)
         pthread_join(client[i].pt_tid, NULL);
-    
+
     /// Do not erase or modify this part
     Client::printAndSaveResults("temp/resultsClient");
 

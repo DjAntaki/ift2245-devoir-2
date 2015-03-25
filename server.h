@@ -3,7 +3,6 @@
 
 #include "common.h"
 
-
 //POSIX library for threads
 #include <pthread.h>
 #include <unistd.h>
@@ -15,7 +14,7 @@ public:
     ServerThreads();
     ~ServerThreads();
 
-    bool ServerThreads::BankerSimulation(int *request);
+    bool BankersSimulation(int *request);
     void readConfigurationFile(const char *fileName);
     void createAndStart();
     void initializationOfDataStructures();
@@ -40,9 +39,9 @@ private:
 
     static int sock; // Main server Socket File Descriptor
     static int timeout; // Maximum number of seconds that the server program will run
-    static int requestProcesed; // Number of request already processed
+    static int requestProcessed; // Number of request already processed
     static int totalNumRequests; // Total number of request to be processed (numClients*numRequestPerClient)
- 
+    static bool ClientsRunning [] = new bool[numClients];
     
     //Banker's Algorithm data structures (see the book for further details)
     static int *Available;

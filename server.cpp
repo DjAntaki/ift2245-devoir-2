@@ -13,16 +13,18 @@ void ServerThreads::initializationOfDataStructures() {
     // here (use the bool variable 'initDataProvided' to cover both
     // scenarios.
 
-    if (!initDataProvided) {
 
-        for (int i = 0; i < numResources; i++) {
+    if (!initDataProvided)
+    {
+        // génération des données
+        for (int i = 0; i < numResources; i++)
+        {
             Available[i] = rand() % (2 * numClients);
             for (int j = 0; j < numClients; j++) {
                 Max[j][i] = rand() % Available[i];
             }
         }
     }
-
     /// TP2_END_TO_DO
 
     ///DO NOT ERASE THIS PART
@@ -40,94 +42,112 @@ void ServerThreads::initializationOfDataStructures() {
  */
 void ServerThreads::processRequest(int threadID, int sockfd) {
     // contient la requête du client
-    int request[1 + numResources];
+    int request[1 + numResources + 1];
     bzero(&request, sizeof (int) * (1 + numResources));
 
-    pthread_mutex_lock(&accept_lock);
+    //pthread_mutex_lock(&accept_lock);
     // lecture de la requête du client
     //
-    int n = read(sockfd, request, (1 + numResources) * sizeof (int));
+    int n = read(sockfd, request, (1 + numResources + 1) * sizeof (int));
 
-    pthread_mutex_unlock(&accept_lock);
+    //pthread_mutex_unlock(&accept_lock);
 
     if (n < 0)
         error("ERROR reading from socket");
 
     int clientID = request[0];
 
-    printf("thread %u handling request from client %u", threadID, clientID);
+    printf("server %u handling request from client %u", threadID, clientID);
+
+    cout << "server " << threadID << ": client: " << clientID << ": ";
 
     for (int i = 1; i < 1 + numResources; i++)
         cout << " " << request[i];
 
-    cout << endl;
-
-    // TODO: mutex sur l'algorithme du Banquier
-
+    cout << " last request? " << request[numResources + 1] << endl;
+    bool lastrequest = request[numResources + 1];
+    
     //Traitement de la requete
     // C'est une requete qui demande des ressources
     // Algorithme du Banquier!
     //
-    int answer = 0; ///On suppose la requête valide
+    int answer[1] = {0}; ///On suppose la requête valide
 
     pthread_mutex_lock(&ServerThreads::available_lock);
-    for (int i = 0; i < numResources; i++) {
-        if (request[i + 1] <= Max[clientID][i] && request[i + 1] >= -Allocation[i]) {
+    for (int i = 0; i < numResources; i++)
+    {
+        cout << "Allocation " << i << " : " << Allocation[clientID][i] << endl;
+        if ((request[i + 1] <= Max[clientID][i]) && (-request[i + 1] <= Allocation[clientID][i]))
+        {
 
-            if (request[i + 1] > Available[i] ) { // || !ServerThreads::BankersSimulation(request)
+            if (request[i + 1] > Available[i] || !BankersSimulation(request)) // 
+            {
+                cout << "on wait" << endl;
                 //Not enough ressources, waiting time as answer. 1000 pour l'instant.
-                answer = 1000;
+                answer[0] = 1000;
                 countOnWait++;
                 break;
             }
 
         } else {
             //Invalid request
-            answer = -1;
+            cout << "invalid" << endl;
+            answer[0] = -1;
             countInvalid++;
             break;
         }
     }
-    if (answer == 0) {
-        for (int i = 0; i < numResources; i++) {
+
+    if (answer[0] == 0)
+    {
+        cout << "accepted" << endl;
+
+        for (int i = 0; i < numResources; i++)
+        {
             Available[i] -= request[i + 1];
             Allocation[clientID][i] += request[i + 1];
             Need[clientID][i] = 0;
         }
         countAccepted++;
 
-    } else if (answer > 0) {
-
+    }
+    else if (answer[0] > 0)
+    {
         for (int i = 0; i < numResources; i++) {
             Need[clientID][i] = request[i + 1];
         }
 
     }
 
+    // considère que la requête est processé
+    if (answer[0] <= 0)
+        requestProcessed++;
+    
+    if (lastrequest){
+        ClientsRunning = false;
+    }
+        
+
+    pthread_mutex_unlock(&available_lock);
+
+    cout << "server " << threadID << ": written " << answer[0] << " to client " << clientID << endl;
+    cout << "Total processed request " << requestProcessed << "/" << totalNumRequests << endl;
+
     // écrit un entier pour répondre au client
     if (write(sockfd, &answer, sizeof (int)) < 0)
         error("could not respond to client");
 
-    cout << "server " << threadID << ": written " << answer << " to client " << clientID << endl;
-
     // le client devrait avoir terminé à ce point et commencé à traiter une
     // nouvelle requête
-
-    // considère que la requête est processé
-    if (answer == 0)
-        requestProcesed++;
-
-    pthread_mutex_unlock(&available_lock);
-
 }
 
 //Return a boolean indicating if the system is safe if it proceed with that request.
 //Disclaimer : J'ai lu la page wikipedia de l'algorithme du banquier pour le comprendre.
 //Une fois compris, je ne lai pas relu pour coder l'algo. Toute ressemble avec la page wikipedia est a blamer sur ma mémoire.
 
-bool ServerThreads::BankerSimulation(int *request) {
+bool ServerThreads::BankersSimulation(int *request) {
 
-    bool ClientsRunning [] = new bool[numClients]; //doit etre une copie de letat des clients au demaragge de la simulation
+    bool running [] ; //doit etre une copie de letat des clients au demaragge de la simulation
     int c = 0;
     int avl[][]; //faire une copie de Available
     
@@ -140,7 +160,7 @@ bool ServerThreads::BankerSimulation(int *request) {
         bool safe = 0;
         for (int i; i < numClients; i++) {
 
-            if (ClientsRunning[i]) {
+            if (running[i]) {
                 bool release = true;
 
                 for (int y; y < numResources; y++) {
@@ -152,7 +172,7 @@ bool ServerThreads::BankerSimulation(int *request) {
                 if (release) {
                     safe = 1;
                     c--;
-                    ClientsRunning = false;
+                    running = false;
                     for (int y; y < numResources; y++) {
                         avl[i][y] += Allocation[i][y];
                     }
@@ -207,8 +227,11 @@ void* ServerThreads::threadCode(void * param) {
 
         // one fd per connection, this one is done
         close(thread_fd);
-    } while (requestProcesed <= totalNumRequests);
 
+    }
+    while (requestProcessed < totalNumRequests);
+
+    pthread_exit(NULL);
 }
 
 /// Do not modify this function
@@ -216,7 +239,7 @@ void* ServerThreads::threadCode(void * param) {
 
 void ServerThreads::createAndStart() {
     // création du socket
-    sock = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
+    sock = socket(AF_INET, SOCK_STREAM, 0);
 
     if (sock < 0)
         error("ERROR opening socket");
@@ -258,7 +281,7 @@ void ServerThreads::printAndSaveResults(const char* fileName) {
     cout << "Requests sent to wait:\t\t" << countOnWait << endl;
     cout << "Invalid requests:\t\t" << countInvalid << endl;
     cout << "Clients dispatched:\t\t" << countClientsDispatched << endl;
-    cout << "Total requests proccesed:\t" << requestProcesed << endl;
+    cout << "Total requests proccesed:\t" << requestProcessed << endl;
 
     ///DO NOT MODIFY THIS PART
     // Save the counted values for evaluation
@@ -296,9 +319,12 @@ void ServerThreads::readConfigurationFile(const char *fileName) {
     Max = new int*[numClients];
     Allocation = new int*[numClients];
     Need = new int*[numClients];
+    ClientsRunning = new bool[numClients];
+    bzero(ClientRunning, sizeof (bool)*numClients);
     for (int i = 0; i < numClients; i++) {
         Max[i] = new int[numResources];
         Allocation[i] = new int[numResources];
+        bzero(Allocation[i], sizeof (int) * numResources);
         Need[i] = new int[numResources];
     }
 
@@ -372,18 +398,23 @@ ServerThreads::~ServerThreads() {
     if (pt_attr != NULL)
         delete []pt_attr;
 
-    if (Available != NULL)
-        delete []Available;
-    if (Max != NULL) {
-        for (int i = 0; i < numResources; i++) {
-            delete []Max[i];
-            delete []Allocation[i];
-            delete []Need[i];
-        }
-        delete []Max;
-        delete []Allocation;
-        delete []Need;
+    /*
+if (Available != NULL)
+    delete []Available;
+if (Max != NULL)
+{
+    for (int i = 0; i < numResources; i++)
+    {
+        delete []Max[i];
+        delete []Allocation[i];
+        delete []Need[i];
+>>>>>>> a723906283783980b71058ba657403617fd505cd
     }
+    delete []Max;
+    delete []Allocation;
+    delete []Need;
+}
+     */
 
     if (sock == -1)
         close(sock);
@@ -394,11 +425,12 @@ int ServerThreads::numClients;
 int ServerThreads::numResources;
 int ServerThreads::numRequestsPerClient;
 //Initialization of static variables
-int ServerThreads::requestProcesed = 0;
+int ServerThreads::requestProcessed = 0;
 int ServerThreads::totalNumRequests = 0;
 int ServerThreads::timeout = 0;
 int ServerThreads::sock = -1;
-
+bool ServerThreads::ClientsRunning[] = NULL
+        
 // Initialization of result variables
 int ServerThreads::countAccepted = 0;
 int ServerThreads::countOnWait = 0;

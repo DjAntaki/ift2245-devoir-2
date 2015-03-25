@@ -87,7 +87,7 @@ void ServerThreads::processRequest(int threadID, int sockfd)
             {
                 cout << "on wait" << endl;
                 //Not enough ressources, waiting time as answer. 1000 pour l'instant.
-                answer[0] = 1000;
+                answer[0] = 150;
                 countOnWait++;
                 break;
             }
@@ -242,11 +242,20 @@ void* ServerThreads::threadCode(void * param)
         int thread_fd;
         while ((thread_fd = accept(sock, (struct sockaddr *) &thread_addr, &threadSL)) < 0)
         {
+            // revérification
+            if (requestProcessed >= totalNumRequests)
+            {
+                close(thread_fd);
+                pthread_mutex_unlock(&ServerThreads::accept_lock);
+                break;
+            }
+
             if ((time(NULL) - start) >= timeout)
             {
                 cerr << "Time out on thread " << ID << endl;
+                close(thread_fd);
                 pthread_mutex_unlock(&ServerThreads::accept_lock);
-                pthread_exit(NULL);
+                break;
             }
         }
 
@@ -259,7 +268,6 @@ void* ServerThreads::threadCode(void * param)
 
         // one fd per connection, this one is done
         close(thread_fd);
-
     }
     while (requestProcessed < totalNumRequests);
 
@@ -303,6 +311,8 @@ void ServerThreads::createAndStart()
     // wait until all server threads have finished
     for (int i = 0; i < numServerThreads; i++)
         pthread_join(pt_tid[i], NULL);
+
+    close(sock);
 }
 
 /// You can modify this function to print other values at

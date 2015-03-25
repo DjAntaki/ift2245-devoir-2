@@ -147,6 +147,12 @@ void* Client::run(void * param)
                 countOnWait++;
             }
 
+            // client dispatch
+            if (request_id == (numRequests - 1))
+            {
+                countClientsDispatched++;
+            }
+
             pthread_mutex_unlock(&Client::results_lock);
 
             // ferme le socket pour libérer une ressource

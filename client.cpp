@@ -51,24 +51,31 @@ void* Client::run(void * param)
 
             if (acquisition == 0)
             {
-                cout << "allocation valide" << endl;
+                cout << "client" << client->id << ": request" << i << ": allocation valide" << endl;
                 // allocation de ressources
-                request[i + 1] = (rand() % (Client::Max[client->id][i] - client->acquired[i]));
+                request[i + 1] =
+                    (Client::Max[client->id][i] == client->acquired[i]) ?
+                    0 : // modulo 0 indéfini
+                    (rand() % (Client::Max[client->id][i] - client->acquired[i]));
             }
             else if (acquisition == 1)
             {
-                cout << "libération valide" << endl;
+                cout << "client" << client->id << ": request" << i << ": libération valide" << endl;
                 // libération de ressources
                 request[i + 1] = (client->acquired[i] > 0) ? -(rand() % client->acquired[i]) : 0; // ...?
             }
             else if (acquisition == 2) // requête invalide d'allocation
             {
-                cout << "allocation invalide" << endl;
-                request[i + 1] = (Client::Max[client->id][i] - client->acquired[i]) + (rand() % (Client::Max[client->id][i] - client->acquired[i]));
+                cout << "client" << client->id << ": request" << i << ": allocation invalide" << endl;
+                request[i + 1] = (Client::Max[client->id][i] - client->acquired[i]) +
+                    (
+                     (Client::Max[client->id][i] == client->acquired[i]) ? 0 :
+                     rand() % (Client::Max[client->id][i] - client->acquired[i])
+                    );
             }
             else // requête invalide de libération
             {
-                cout << "libération invalide" << endl;
+                cout << "client" << client->id << ": request" << i << ": libération invalide" << endl;
                 request[i + 1] = - (client->acquired[i] + 1);
             }
         }
@@ -88,8 +95,6 @@ void* Client::run(void * param)
         {
             sem_wait(&Client::open_limit);
 
-            cout << "client " << client->id << " acquired the open semaphore" << endl;
-
             int sock = socket(AF_INET, SOCK_STREAM, 0);
 
             if (sock < 0)
@@ -106,15 +111,13 @@ void* Client::run(void * param)
             if (written < sizeof (int))
                 error("couldn't write request to server");
 
-            cout << "waiting on server..." << endl;
-            
             // lit la réponse du serveur
             written = read(sock, response, sizeof (int));
 
-            cout << "read " << response[0] << " from server" << endl;
-
             if (written < sizeof (int))
                 error("couldn't read response from server");
+
+            cout << "client " << client->id << ": read " << response[0] << " from server" << endl;
 
             // vérouille les variables pour les résultats
             pthread_mutex_lock(&Client::results_lock);
@@ -130,7 +133,6 @@ void* Client::run(void * param)
                 countAccepted++;
                 break;
             case INVALID:
-                cout << "client " << client->id << ": request " << request_id << ": INVALID";
                 countInvalid++;
                 break;
             default:
@@ -270,7 +272,7 @@ int main(void)
     int n = Client::readConfigurationFile("initValues.cfg");
 
     // initialisation de la mutex
-    sem_init(&Client::open_limit, 0, 512);
+    sem_init(&Client::open_limit, 0, 4);
 
     // nombre de threads instanciés
     Client client[n];

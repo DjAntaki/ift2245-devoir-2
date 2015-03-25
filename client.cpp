@@ -50,7 +50,11 @@ void* Client::run(void * param)
         {
             cout << "client " << client->id << ": resource " << i << " (" << client->acquired[i] << "/" << Client::Max[client->id][i] << ")" << endl;
 
-            if (acquisition == 0)
+            if (request_id == (numRequests - 1))
+            {
+                request[i + 1] = -client->acquired[i];
+            }
+            else if (acquisition == 0)
             {
                 cout << "client" << client->id << ": request" << i << ": allocation valide" << endl;
                 // allocation de ressources

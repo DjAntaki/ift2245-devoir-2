@@ -132,6 +132,7 @@ void ServerThreads::processRequest(int threadID, int sockfd)
     if (lastrequest)
     {
         ClientsRunning[clientID] = false;
+        countClientsDispatched++;
     }
 
     pthread_mutex_unlock(&available_lock);
@@ -151,9 +152,14 @@ void ServerThreads::processRequest(int threadID, int sockfd)
 //Disclaimer : J'ai lu la page wikipedia de l'algorithme du banquier pour le comprendre.
 //Une fois compris, je ne lai pas relu pour coder l'algo. Toute ressemble avec la page wikipedia est a blamer sur ma mémoire.
 
+/**
+ * Simulation pour l'algorithme du Banquier.
+ * 
+ * @param request
+ * @return 
+ */
 bool ServerThreads::BankersSimulation(int *request)
 {
-
     bool running[numClients]; //doit etre une copie de letat des clients au demaragge de la simulation
 
     for (int i = 0; i < numClients; i++)
@@ -165,7 +171,6 @@ bool ServerThreads::BankersSimulation(int *request)
     for (int i = 0; i < numResources; i++)
         avl[i] = Available[i];
 
-    int clientID = request[0];
     for (int x = 1; x < numResources + 1; x++)
     {
         avl[x] -= request[x];
